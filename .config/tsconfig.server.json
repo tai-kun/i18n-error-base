@@ -4,12 +4,8 @@
     "@tsconfig/strictest"
   ],
   "include": [
-    "./env.d.ts",
-    "../src/**/*",
-    "../tests/**/*"
-  ],
-  "exclude": [
-    "../tests/**/*.client.test.ts"
+    "global.d.ts",
+    "../tests/**/*.server.test.ts"
   ],
   "compilerOptions": {
     "types": [

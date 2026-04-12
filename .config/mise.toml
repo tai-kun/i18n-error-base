@@ -15,7 +15,11 @@ run = "npx vitest --config ./.config/vitest.server.ts"
 run = "npx vitest --config ./.config/vitest.client.ts"
 
 [tasks."test:typecheck"]
-run = "npx tsc --noEmit --project ./.config/tsconfig.test.json"
+run = [
+    "npx tsc --noEmit --project ./.config/tsconfig.config.json",
+    "npx tsc --noEmit --project ./.config/tsconfig.client.json",
+    "npx tsc --noEmit --project ./.config/tsconfig.server.json",
+]
 
 [tasks.update]
 run = [

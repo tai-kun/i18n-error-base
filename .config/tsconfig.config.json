@@ -6,6 +6,9 @@
   "include": [
     "./**/*"
   ],
+  "exclude": [
+    "./global.d.ts"
+  ],
   "compilerOptions": {
     "types": [
       "node"
@@ -14,8 +17,8 @@
       "ESNext"
     ],
     "noEmit": true,
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "erasableSyntaxOnly": true
   }
 }
