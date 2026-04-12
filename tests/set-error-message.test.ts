@@ -10,7 +10,7 @@ class TestError extends I18nErrorBase<{ code: string; value: number }> {}
 test("特定の言語でメッセージ作成関数を登録したとき、登録した関数が正しく保持される", ({ expect }) => {
   // Arrange
   const lang = "ja";
-  const messageFunc = (error: TestError) => `エラーコード: ${error.meta.code}`;
+  const messageFunc = (meta: TestError["meta"]) => `エラーコード: ${meta.code}`;
 
   // Act
   setErrorMessage(TestError, messageFunc, lang);

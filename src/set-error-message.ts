@@ -19,22 +19,27 @@ export interface I18nErrorBaseConstructor {
  * ```ts
  * setErrorMessage(
  *   TypeError,
- *   ({ meta }) => `${meta.expected} を期待しましたが、${meta.actual} を得ました`,
+ *   meta => `${meta.expected} を期待しましたが、${meta.actual} を得ました`,
  *   "ja",
  * );
  * ```
  */
 export default function setErrorMessage<TReference extends I18nErrorBaseConstructor>(
   reference: TReference,
-  message: (error: InstanceType<TReference>) => string,
+  message: string | ((meta: InstanceType<TReference>["meta"]) => string),
   lang: string,
 ): void {
-  const msg = getMessageMap();
-  let store = msg.get(reference);
+  const map = getMessageMap();
+  let store = map.get(reference);
   if (store === undefined) {
     store = new Map();
-    msg.set(reference, store);
+    map.set(reference, store);
   }
 
-  store.set(lang, message);
+  store.set(
+    lang,
+    typeof message === "function"
+      ? message
+      : (() => message),
+  );
 }

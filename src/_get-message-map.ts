@@ -3,7 +3,7 @@ declare global {
    * エラーコンストラクターと言語ごとのメッセージマップを保持するグローバルなストレージです。
    */
   var i18n_error_base__message_map:
-    | WeakMap<object, Map<string, (error: any) => string>>
+    | WeakMap<object, Map<string, (meta: any) => string>>
     | undefined;
 }
 

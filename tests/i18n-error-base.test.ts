@@ -11,7 +11,7 @@ test("インスタンス化したとき、渡したメタデータが保持さ�
   const meta = { code: "ERR_001", value: 100 };
 
   // Act
-  const error = new TestError(undefined, meta);
+  const error = new TestError(meta, "message");
 
   // Assert
   expect(error.meta).toEqual(meta);
@@ -23,7 +23,7 @@ test("cause を含むオプションを渡したとき、 cause プロパティ�
   const options: ErrorOptions = { cause };
 
   // Act
-  const error = new TestError(options, { code: "ERR", value: 0 });
+  const error = new TestError({ code: "ERR", value: 0 }, "message", options);
 
   // Assert
   expect(error.cause).toBe(cause);
