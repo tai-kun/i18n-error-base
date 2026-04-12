@@ -25,6 +25,6 @@ run = [
 run = [
     "npx npm-check-updates --target minor -u --cooldown 3",
     "npm install",
-    "npx playwright install chromium firefox webkit --with-deps",
+    "npx playwright install --with-deps",
     "npm audit",
 ]
