@@ -21,6 +21,6 @@ run = "npx tsc --noEmit --project ./.config/tsconfig.test.json"
 run = [
     "npx npm-check-updates --target minor -u --cooldown 3",
     "npm install",
-    "npx playwright install chromium --with-deps",
+    "npx playwright install chromium firefox webkit --with-deps",
     "npm audit",
 ]

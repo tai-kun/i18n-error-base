@@ -1,15 +1,12 @@
 import { defineConfig } from "vitest/config";
-import isDebugMode from "./_is-debug-mode.js";
+import isDebugMode from "./_is-debug-mode";
 
 export default defineConfig({
-  esbuild: {
-    target: [
-      "es2020",
-      "node22",
-    ],
+  oxc: {
+    target: "es2020",
   },
   define: {
-    __DEBUG__: String(isDebugMode()),
+    __DEBUG__: `${isDebugMode}`,
     __CLIENT__: "false",
     __SERVER__: "true",
   },

@@ -1,13 +1,13 @@
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
-import isDebugMode from "./_is-debug-mode.js";
+import isDebugMode from "./_is-debug-mode";
 
 export default defineConfig({
-  esbuild: {
+  oxc: {
     target: "es2020",
   },
   define: {
-    __DEBUG__: String(isDebugMode()),
+    __DEBUG__: `${isDebugMode}`,
     __CLIENT__: "true",
     __SERVER__: "false",
   },
@@ -24,6 +24,8 @@ export default defineConfig({
       headless: true,
       instances: [
         { browser: "chromium" },
+        { browser: "firefox" },
+        { browser: "webkit" },
       ],
     },
   },
