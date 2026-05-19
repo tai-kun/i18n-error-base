@@ -1,10 +1,12 @@
 import getMessageMap from "./_get-message-map.js";
+import type { I18N_ERROR_BASE_SYMBOL } from "./_i18n-error-base-symbol.types.js";
 import type { default as I18nErrorBase, ErrorMeta } from "./i18n-error-base.js";
 
 /**
  * エラーのコンストラクターです。
  */
 export interface I18nErrorBaseConstructor {
+  readonly [I18N_ERROR_BASE_SYMBOL]: never;
   new (...args: any): I18nErrorBase<ErrorMeta | undefined>;
 }
 

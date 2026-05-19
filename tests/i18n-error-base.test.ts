@@ -15,7 +15,7 @@ test("インスタンス化したとき、渡したメタデータが保持さ�
   const error = new TestError(meta, "message");
 
   // Assert
-  expect(error.meta).toEqual(meta);
+  expect(error.meta).toStrictEqual(meta);
 });
 
 test("cause を含むオプションを渡したとき、 cause プロパティに原因が保持される", ({ expect }) => {

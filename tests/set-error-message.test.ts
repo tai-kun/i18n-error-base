@@ -72,3 +72,16 @@ test("複数の言語でメッセージを登録できる", ({ expect }) => {
   expect(map!.get(lang2)).toBe(messageFunc);
   expect(map!.get(lang3)).toBe(messageFunc);
 });
+
+test("I18nErrorBase を継承していないクラスに対して型レベルでエラーを出す", ({ expect }) => {
+  const FakeError = class {} as unknown as { new (): I18nErrorBase };
+
+  setErrorMessage(
+    // @ts-expect-error `I18N_ERROR_BASE_SYMBOL` を持っていないため、型チェックでエラーになる
+    FakeError,
+    "",
+    "",
+  );
+
+  expect(true).toBe(true);
+});
