@@ -1,4 +1,5 @@
 import { test } from "vitest";
+
 import I18nErrorBase from "../src/i18n-error-base.js";
 
 /**

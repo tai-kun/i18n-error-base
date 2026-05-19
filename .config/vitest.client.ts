@@ -1,5 +1,6 @@
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
+
 import isDebugMode from "./_is-debug-mode";
 
 export default defineConfig({
@@ -12,21 +13,13 @@ export default defineConfig({
     __SERVER__: "false",
   },
   test: {
-    include: [
-      "tests/**/*.test.ts",
-    ],
-    exclude: [
-      "tests/**/*.server.test.ts",
-    ],
+    include: ["tests/**/*.test.ts"],
+    exclude: ["tests/**/*.server.test.ts"],
     browser: {
       provider: playwright(),
       enabled: true,
       headless: true,
-      instances: [
-        { browser: "chromium" },
-        { browser: "firefox" },
-        { browser: "webkit" },
-      ],
+      instances: [{ browser: "chromium" }, { browser: "firefox" }, { browser: "webkit" }],
     },
   },
 });

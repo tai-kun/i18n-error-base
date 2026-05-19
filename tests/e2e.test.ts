@@ -1,5 +1,6 @@
 import { setGlobalConfig } from "valibot";
 import { test } from "vitest";
+
 import { type ErrorOptions, I18nErrorBase, setErrorMessage } from "../src/index.js";
 
 /**

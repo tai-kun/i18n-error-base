@@ -5,7 +5,7 @@ import type { default as I18nErrorBase, ErrorMeta } from "./i18n-error-base.js";
  * エラーのコンストラクターです。
  */
 export interface I18nErrorBaseConstructor {
-  new(...args: any): I18nErrorBase<ErrorMeta | undefined>;
+  new (...args: any): I18nErrorBase<ErrorMeta | undefined>;
 }
 
 /**
@@ -36,10 +36,5 @@ export default function setErrorMessage<TReference extends I18nErrorBaseConstruc
     map.set(reference, store);
   }
 
-  store.set(
-    lang,
-    typeof message === "function"
-      ? message
-      : (() => message),
-  );
+  store.set(lang, typeof message === "function" ? message : () => message);
 }

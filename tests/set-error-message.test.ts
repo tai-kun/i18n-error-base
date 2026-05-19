@@ -1,4 +1,5 @@
 import { test } from "vitest";
+
 import I18nErrorBase from "../src/i18n-error-base.js";
 import setErrorMessage from "../src/set-error-message.js";
 
@@ -7,7 +8,9 @@ import setErrorMessage from "../src/set-error-message.js";
  */
 class TestError extends I18nErrorBase<{ code: string; value: number }> {}
 
-test("特定の言語でメッセージ作成関数を登録したとき、登録した関数が正しく保持される", ({ expect }) => {
+test("特定の言語でメッセージ作成関数を登録したとき、登録した関数が正しく保持される", ({
+  expect,
+}) => {
   // Arrange
   const lang = "ja";
   const messageFunc = (meta: TestError["meta"]) => `エラーコード: ${meta.code}`;
@@ -27,7 +30,9 @@ test("特定の言語でメッセージ作成関数を登録したとき、登�
   expect(stores!.get(lang)).toBe(messageFunc);
 });
 
-test("同じエラー型に対して複数の言語を登録したとき、それぞれの言語設定が保持される", ({ expect }) => {
+test("同じエラー型に対して複数の言語を登録したとき、それぞれの言語設定が保持される", ({
+  expect,
+}) => {
   // Arrange
   const jaFunc = () => "エラー";
   const enFunc = () => "Error";

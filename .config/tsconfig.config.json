@@ -1,21 +1,10 @@
 {
-  "extends": [
-    "@tsconfig/node22",
-    "@tsconfig/strictest"
-  ],
-  "include": [
-    "./**/*"
-  ],
-  "exclude": [
-    "./global.d.ts"
-  ],
+  "extends": ["@tsconfig/node24", "@tsconfig/strictest"],
+  "include": ["./**/*"],
+  "exclude": ["./global.d.ts"],
   "compilerOptions": {
-    "types": [
-      "node"
-    ],
-    "lib": [
-      "ESNext"
-    ],
+    "types": ["node"],
+    "lib": ["ESNext"],
     "noEmit": true,
     "module": "esnext",
     "moduleResolution": "bundler",

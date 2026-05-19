@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config";
+
 import isDebugMode from "./_is-debug-mode";
 
 export default defineConfig({
@@ -11,11 +12,7 @@ export default defineConfig({
     __SERVER__: "true",
   },
   test: {
-    include: [
-      "tests/**/*.test.ts",
-    ],
-    exclude: [
-      "tests/**/*.client.test.ts",
-    ],
+    include: ["tests/**/*.test.ts"],
+    exclude: ["tests/**/*.client.test.ts"],
   },
 });
