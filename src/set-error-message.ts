@@ -27,7 +27,7 @@ export interface I18nErrorBaseConstructor {
 export default function setErrorMessage<TReference extends I18nErrorBaseConstructor>(
   reference: TReference,
   message: string | ((meta: InstanceType<TReference>["meta"]) => string),
-  lang: string,
+  lang: string | Iterable<string>,
 ): void {
   const map = getMessageMap();
   let store = map.get(reference);
@@ -36,5 +36,16 @@ export default function setErrorMessage<TReference extends I18nErrorBaseConstruc
     map.set(reference, store);
   }
 
-  store.set(lang, typeof message === "function" ? message : () => message);
+  if (typeof message !== "function") {
+    const text = message;
+    message = () => text;
+  }
+
+  if (typeof lang === "string") {
+    store.set(lang, message);
+  } else {
+    for (const item of lang) {
+      store.set(item, message);
+    }
+  }
 }

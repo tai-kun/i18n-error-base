@@ -1,7 +1,11 @@
-import { test } from "vitest";
+import { test, beforeEach } from "vitest";
 
 import I18nErrorBase from "../src/i18n-error-base.js";
 import setErrorMessage from "../src/set-error-message.js";
+
+beforeEach(() => {
+  globalThis.i18n_error_base__message_map = undefined;
+});
 
 /**
  * テスト用の具象エラークラス
@@ -19,15 +23,12 @@ test("特定の言語でメッセージ作成関数を登録したとき、登�
   setErrorMessage(TestError, messageFunc, lang);
 
   // Assert
-  // getMessageMap は内部実装のため直接検証せず、
-  // 本来はメッセージ取得側の公開 API を通じて検証すべきであるが、
-  // 現在のコードには取得 API が未実装のため、副作用の発生を許容する。
   const messageMap = globalThis.i18n_error_base__message_map;
   expect(messageMap).toBeDefined();
 
-  const stores = messageMap!.get(TestError);
-  expect(stores).toBeDefined();
-  expect(stores!.get(lang)).toBe(messageFunc);
+  const map = messageMap!.get(TestError);
+  expect(map).toBeDefined();
+  expect(map!.get(lang)).toBe(messageFunc);
 });
 
 test("同じエラー型に対して複数の言語を登録したとき、それぞれの言語設定が保持される", ({
@@ -42,8 +43,32 @@ test("同じエラー型に対して複数の言語を登録したとき、そ�
   setErrorMessage(TestError, enFunc, "en");
 
   // Assert
-  const stores = globalThis.i18n_error_base__message_map!.get(TestError);
-  expect(stores!.size).toBe(2);
-  expect(stores!.get("ja")).toBe(jaFunc);
-  expect(stores!.get("en")).toBe(enFunc);
+  const messageMap = globalThis.i18n_error_base__message_map;
+  expect(messageMap).toBeDefined();
+
+  const map = messageMap!.get(TestError);
+  expect(map!.size).toBe(2);
+  expect(map!.get("ja")).toBe(jaFunc);
+  expect(map!.get("en")).toBe(enFunc);
+});
+
+test("複数の言語でメッセージを登録できる", ({ expect }) => {
+  // Arrange
+  const lang1 = "ja";
+  const lang2 = "jp";
+  const lang3 = "jpn";
+  const messageFunc = (meta: TestError["meta"]) => `エラーコード: ${meta.code}`;
+
+  // Act
+  setErrorMessage(TestError, messageFunc, [lang1, lang2, lang3]);
+
+  // Assert
+  const messageMap = globalThis.i18n_error_base__message_map;
+  expect(messageMap).toBeDefined();
+
+  const map = messageMap!.get(TestError);
+  expect(map).toBeDefined();
+  expect(map!.get(lang1)).toBe(messageFunc);
+  expect(map!.get(lang2)).toBe(messageFunc);
+  expect(map!.get(lang3)).toBe(messageFunc);
 });
