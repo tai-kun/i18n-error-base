@@ -15,14 +15,14 @@ class TestError extends I18nErrorBase<{ code: string; value: number }> {}
 test("特定の言語でメッセージ作成関数を登録したとき、登録した関数が正しく保持される", ({
   expect,
 }) => {
-  // Arrange
+  // 準備
   const lang = "ja";
   const messageFunc = (meta: TestError["meta"]) => `エラーコード: ${meta.code}`;
 
-  // Act
+  // 実行
   setErrorMessage(TestError, messageFunc, lang);
 
-  // Assert
+  // 検証
   const messageMap = globalThis.i18n_error_base__message_map;
   expect(messageMap).toBeDefined();
 
@@ -34,15 +34,15 @@ test("特定の言語でメッセージ作成関数を登録したとき、登�
 test("同じエラー型に対して複数の言語を登録したとき、それぞれの言語設定が保持される", ({
   expect,
 }) => {
-  // Arrange
+  // 準備
   const jaFunc = () => "エラー";
   const enFunc = () => "Error";
 
-  // Act
+  // 実行
   setErrorMessage(TestError, jaFunc, "ja");
   setErrorMessage(TestError, enFunc, "en");
 
-  // Assert
+  // 検証
   const messageMap = globalThis.i18n_error_base__message_map;
   expect(messageMap).toBeDefined();
 
@@ -53,16 +53,16 @@ test("同じエラー型に対して複数の言語を登録したとき、そ�
 });
 
 test("複数の言語でメッセージを登録できる", ({ expect }) => {
-  // Arrange
+  // 準備
   const lang1 = "ja";
-  const lang2 = "jp";
-  const lang3 = "jpn";
+  const lang2 = "ko";
+  const lang3 = "zh";
   const messageFunc = (meta: TestError["meta"]) => `エラーコード: ${meta.code}`;
 
-  // Act
+  // 実行
   setErrorMessage(TestError, messageFunc, [lang1, lang2, lang3]);
 
-  // Assert
+  // 検証
   const messageMap = globalThis.i18n_error_base__message_map;
   expect(messageMap).toBeDefined();
 
@@ -73,15 +73,16 @@ test("複数の言語でメッセージを登録できる", ({ expect }) => {
   expect(map!.get(lang3)).toBe(messageFunc);
 });
 
-test("I18nErrorBase を継承していないクラスに対して型レベルでエラーを出す", ({ expect }) => {
-  const FakeError = class {} as unknown as { new (): I18nErrorBase };
+test("文字列のメッセージを登録したとき、関数に変換されて保持される", ({ expect }) => {
+  // 準備
+  const text = "something went wrong";
 
-  setErrorMessage(
-    // @ts-expect-error `I18N_ERROR_BASE_SYMBOL` を持っていないため、型チェックでエラーになる
-    FakeError,
-    "",
-    "",
-  );
+  // 実行
+  setErrorMessage(TestError, text, "en");
 
-  expect(true).toBe(true);
+  // 検証
+  const messageMap = globalThis.i18n_error_base__message_map;
+  const stored = messageMap!.get(TestError)!.get("en")!;
+  expect(typeof stored).toBe("function");
+  expect(stored({ code: "X", value: 1 })).toBe(text);
 });

@@ -1,6 +1,7 @@
 [tools]
 node = "24"
 pnpm = "10"
+opencode = "1"
 
 [tasks.test]
 run = [
@@ -10,6 +11,7 @@ run = [
   { task = "test:lint" },
   { task = "test:typecheck" },
 ]
+env = { CI = 1 }
 
 [tasks."test:server"]
 run = "npx vitest --config ./.config/vitest.server.ts"
@@ -32,7 +34,7 @@ run = [
   "npx tsc --noEmit --project ./.config/tsconfig.config.json",
 ]
 
-[tasks.fmt]
+[tasks.format]
 run = "npx oxfmt --config ./.config/.oxfmtrc.json"
 
 [tasks.lint]

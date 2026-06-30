@@ -33,7 +33,7 @@ export type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined> = [TMeta] e
 /**
  * Error クラスを継承するための内部的な基底クラスの型定義です。
  */
-export interface _ErrorConstructor extends ErrorConstructor {
+interface _ErrorConstructor extends ErrorConstructor {
   /**
    * I18nErrorBase クラスのインスタンスを識別するシンボルです。
    *
@@ -55,7 +55,7 @@ export default class I18nErrorBase<
    *
    * ゲッターであるため、現在の設定言語に基づいて翻訳されたメッセージを取得できます。
    */
-  public override message!: string;
+  public override readonly message!: string;
 
   /**
    * エラーに付随するメタデータです。
@@ -100,9 +100,6 @@ export default class I18nErrorBase<
           (defaultMessage ??= typeof message === "function" ? message(meta) : message);
 
         return String(newMessage);
-      },
-      set: (newMessage) => {
-        super.message = String(newMessage);
       },
       enumerable: true,
     });
