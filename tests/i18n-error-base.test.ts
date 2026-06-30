@@ -1,6 +1,8 @@
+import { setGlobalConfig } from "valibot";
 import { test, beforeEach } from "vitest";
 
 import I18nErrorBase from "../src/i18n-error-base.js";
+import setErrorMessage from "../src/set-error-message.js";
 
 beforeEach(() => {
   globalThis.i18n_error_base__message_map = undefined;
@@ -67,4 +69,48 @@ test("Error および I18nErrorBase のインスタンスである", ({ expect }
   expect(error).toBeInstanceOf(Error);
   expect(error).toBeInstanceOf(I18nErrorBase);
   expect(error).toBeInstanceOf(TestError);
+});
+
+test("prefix が設定されていないとき、メッセージに接頭辞が付かない", ({ expect }) => {
+  // 準備
+  const error = new TestError({ code: "ERR", value: 0 }, "something went wrong");
+
+  // 実行
+  const { message } = error;
+
+  // 検証
+  expect(message).toBe("something went wrong");
+});
+
+test("prefix が設定されているとき、メッセージの先頭に接頭辞が付く", ({ expect }) => {
+  // 準備
+  class PrefixedError extends I18nErrorBase<{ code: string }> {
+    static override prefix = "[PrefixedError] ";
+  }
+  const error = new PrefixedError({ code: "ERR" }, "something went wrong");
+
+  // 実行
+  const { message } = error;
+
+  // 検証
+  expect(message).toBe("[PrefixedError] something went wrong");
+});
+
+test("prefix と setErrorMessage の両方が設定されているとき、 prefix が先頭に付く", ({ expect }) => {
+  // 準備
+  class PrefixedError extends I18nErrorBase<{ code: string }> {
+    static override prefix = "[ERROR] ";
+  }
+  setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+  const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+  // 実行
+  setGlobalConfig({ lang: "ja" });
+  const jaMessage = error.message;
+  setGlobalConfig({ lang: "en" });
+  const enMessage = error.message;
+
+  // 検証
+  expect(jaMessage).toBe("[ERROR] code is ERR");
+  expect(enMessage).toBe("[ERROR] fallback");
 });

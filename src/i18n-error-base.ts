@@ -51,6 +51,13 @@ export default class I18nErrorBase<
   TMeta extends ErrorMeta | undefined = ErrorMeta | undefined,
 > extends (Error as _ErrorConstructor) {
   /**
+   * エラーメッセージの先頭に付加する接頭辞です。
+   *
+   * 継承先のクラスで上書きして使用します。
+   */
+  static prefix?: string;
+
+  /**
    * エラーメッセージです。
    *
    * ゲッターであるため、現在の設定言語に基づいて翻訳されたメッセージを取得できます。
@@ -99,7 +106,9 @@ export default class I18nErrorBase<
           getMessageMap().get(this.constructor)?.get(lang)?.(this.meta) ??
           (defaultMessage ??= typeof message === "function" ? message(meta) : message);
 
-        return String(newMessage);
+        const prefix = (this.constructor as typeof I18nErrorBase).prefix;
+
+        return prefix ? `${prefix}${String(newMessage)}` : String(newMessage);
       },
       enumerable: true,
     });
