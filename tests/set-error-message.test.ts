@@ -86,3 +86,18 @@ test("文字列のメッセージを登録したとき、関数に変換され�
   expect(typeof stored).toBe("function");
   expect(stored({ code: "X", value: 1 })).toBe(text);
 });
+
+test("既存の言語のメッセージを上書きできる", ({ expect }) => {
+  // 準備
+  const first = () => "first";
+  const second = () => "second";
+
+  // 実行
+  setErrorMessage(TestError, first, "ja");
+  setErrorMessage(TestError, second, "ja");
+
+  // 検証
+  const messageMap = globalThis.i18n_error_base__message_map;
+  expect(messageMap!.get(TestError)!.get("ja")).toBe(second);
+  expect(messageMap!.get(TestError)!.size).toBe(1);
+});

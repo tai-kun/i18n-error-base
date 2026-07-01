@@ -85,7 +85,9 @@ test("prefix が設定されていないとき、メッセージに接頭辞が�
 test("prefix が設定されているとき、メッセージの先頭に接頭辞が付く", ({ expect }) => {
   // 準備
   class PrefixedError extends I18nErrorBase<{ code: string }> {
-    static override prefix = "[PrefixedError] ";
+    static {
+      this.prefix = "[PrefixedError] ";
+    }
   }
   const error = new PrefixedError({ code: "ERR" }, "something went wrong");
 
@@ -99,7 +101,9 @@ test("prefix が設定されているとき、メッセージの先頭に接頭�
 test("prefix と setErrorMessage の両方が設定されているとき、 prefix が先頭に付く", ({ expect }) => {
   // 準備
   class PrefixedError extends I18nErrorBase<{ code: string }> {
-    static override prefix = "[ERROR] ";
+    static {
+      this.prefix = "[ERROR] ";
+    }
   }
   setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
   const error = new PrefixedError({ code: "ERR" }, "fallback");
@@ -113,4 +117,44 @@ test("prefix と setErrorMessage の両方が設定されているとき、 pref
   // 検証
   expect(jaMessage).toBe("[ERROR] code is ERR");
   expect(enMessage).toBe("[ERROR] fallback");
+});
+
+test("TMeta が undefined のサブクラスでは meta を省略できる", ({ expect }) => {
+  // 準備
+  class NoMetaError extends I18nErrorBase<undefined> {}
+
+  // 実行
+  const error = new NoMetaError("no meta");
+
+  // 検証
+  expect(error.meta).toBeUndefined();
+  expect(error.message).toBe("no meta");
+});
+
+test("message プロパティーは列挙可能である", ({ expect }) => {
+  // 準備
+  const error = new TestError({ code: "ERR", value: 0 }, "enumerable");
+
+  // 実行と検証
+  expect(Object.keys(error)).toContain("message");
+  expect(error.propertyIsEnumerable("message")).toBe(true);
+});
+
+test("toString の結果にメッセージが含まれる", ({ expect }) => {
+  // 準備
+  const error = new TestError({ code: "ERR", value: 0 }, "test message");
+
+  // 実行と検証
+  expect(error.toString()).toMatch(/: test message$/);
+});
+
+test("メッセージファクトリーが空文字を返すとき message は空文字になる", ({ expect }) => {
+  // 準備
+  const error = new TestError({ code: "ERR", value: 0 }, () => "");
+
+  // 実行
+  const { message } = error;
+
+  // 検証
+  expect(message).toBe("");
 });

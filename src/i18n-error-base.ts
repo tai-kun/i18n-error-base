@@ -22,13 +22,61 @@ export type ErrorMeta = {
 };
 
 /**
+ * エラーメッセージを生成するファクトリー関数の型です。
+ *
+ * @template TMeta メタデータの型定義です。
+ */
+export interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
+  (meta: TMeta): string;
+}
+
+/**
  * I18nErrorBase クラスのコンストラクターに渡すパラメーターのタプル型です。
  *
  * @template TMeta メタデータの型定義です。
  */
-export type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined> = [TMeta] extends [undefined]
-  ? [message: string | ((meta: TMeta) => string), options?: ErrorOptions | undefined]
-  : [meta: TMeta, message: string | ((meta: TMeta) => string), options?: ErrorOptions | undefined];
+export type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> = [
+  TMeta,
+] extends [undefined]
+  ?
+      | [
+          /**
+           * エラーメッセージです。
+           */
+          message: string | MessageFactory<TMeta>,
+          /**
+           * Error クラスのオプションです。
+           */
+          options?: ErrorOptions | undefined,
+        ]
+      | [
+          /**
+           * メタデータです。省略する場合は undefined を指定します。
+           */
+          meta: undefined,
+          /**
+           * エラーメッセージです。
+           */
+          message: string | MessageFactory<TMeta>,
+          /**
+           * Error クラスのオプションです。
+           */
+          options?: ErrorOptions | undefined,
+        ]
+  : [
+      /**
+       * エラーに付随するメタデータです。
+       */
+      meta: TMeta,
+      /**
+       * エラーメッセージです。
+       */
+      message: string | MessageFactory<TMeta>,
+      /**
+       * Error クラスのオプションです。
+       */
+      options?: ErrorOptions | undefined,
+    ];
 
 /**
  * Error クラスを継承するための内部的な基底クラスの型定義です。
@@ -79,11 +127,7 @@ export default class I18nErrorBase<
       typeof params[0] === "string" || typeof params[0] === "function"
         ? [undefined, ...params]
         : params
-    ) as [
-      meta: TMeta,
-      message: string | ((meta: TMeta) => string),
-      options?: ErrorOptions | undefined,
-    ];
+    ) as [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
 
     // メッセージは Object.defineProperty にて再定義するため、ここでは空文字を渡します。
     super("", options);
