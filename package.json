@@ -1,7 +1,7 @@
 {
   "name": "i18n-error-base",
   "version": "0.0.0",
-  "description": "",
+  "description": "Valibot のグローバルな言語設定と連携して、ロケールに応じたエラーメッセージを動的に切り替えられるエラークラスの基底です。",
   "homepage": "https://github.com/tai-kun/i18n-error-base",
   "license": "MIT",
   "author": "tai-kun",

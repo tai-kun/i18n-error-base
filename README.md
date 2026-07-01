@@ -1,6 +1,6 @@
 # i18n-error-base
 
-`valibot` のグローバルな言語設定と連携して、ロケールに応じたエラーメッセージを動的に切り替えられるエラークラスの基底です。
+Valibot のグローバルな言語設定と連携して、ロケールに応じたエラーメッセージを動的に切り替えられるエラークラスの基底です。
 
 ## インストール
 
@@ -50,7 +50,7 @@ setErrorMessage(ValidationError, ({ field, value }) => `${field} の値が不正
 
 ### 言語を切り替える
 
-`valibot` の `setGlobalConfig` で言語を切り替えると、`error.message` にアクセスしたときにその言語に対応したメッセージが返ります。
+Valibot の `setGlobalConfig` で言語を切り替えると、`error.message` にアクセスしたときにその言語に対応したメッセージが返ります。
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -245,7 +245,7 @@ type ErrorOptions = { readonly cause?: unknown };
 
 `error.message` にアクセスすると、以下の優先順位でメッセージが解決されます。
 
-1. `valibot` のグローバルな言語設定 (`setGlobalConfig({ lang })`) で指定された言語に対応するメッセージが `setErrorMessage` で登録されている場合は、そのメッセージを返します。
+1. Valibot のグローバルな言語設定 (`setGlobalConfig({ lang })`) で指定された言語に対応するメッセージが `setErrorMessage` で登録されている場合は、そのメッセージを返します。
 2. 登録されていない場合は、コンストラクターに指定されたデフォルトのメッセージを返します。
 3. `static prefix` が設定されている場合は、上記のメッセージの先頭に接頭辞を付加します。
 
