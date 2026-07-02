@@ -13,9 +13,10 @@ defaults:
   run:
     shell: bash -euo pipefail {0}
 
-concurrency:
-  group: github-pages
-  cancel-in-progress: false
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   deploy:
