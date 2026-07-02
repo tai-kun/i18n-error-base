@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
