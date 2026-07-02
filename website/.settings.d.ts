@@ -11,12 +11,12 @@ const __REPOSITORY_NAME: string;
 /**
  * サポートする言語の一覧です。
  */
-const __LOCALES: readonly ["ja", "en"];
+const __LOCALES: readonly [string, ...string[]];
 
 /**
  * 言語判定に失敗した際のフォールバック用ロケールです。
  */
-const __FALLBACK_LOCALE: "en";
+const __FALLBACK_LOCALE: string;
 
 /**
  * 最新のメジャーバージョン番号です。

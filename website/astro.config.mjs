@@ -27,10 +27,10 @@ export default defineConfig({
         en: {
           label: "English",
         },
-        "zh-CN": {
+        "zh-cn": {
           label: "简体中文",
         },
-        "zh-TW": {
+        "zh-tw": {
           label: "繁體中文",
         },
         ko: {
@@ -85,8 +85,8 @@ export default defineConfig({
           label: "はじめに",
           translations: {
             en: "Getting Started",
-            "zh-CN": "开始",
-            "zh-TW": "開始",
+            "zh-cn": "开始",
+            "zh-tw": "開始",
             ko: "시작하기",
             es: "Comenzando",
             de: "Erste Schritte",
@@ -106,8 +106,8 @@ export default defineConfig({
               label: "概要",
               translations: {
                 en: "Overview",
-                "zh-CN": "概述",
-                "zh-TW": "概述",
+                "zh-cn": "概述",
+                "zh-tw": "概述",
                 ko: "개요",
                 es: "Resumen",
                 de: "Übersicht",
@@ -130,8 +130,8 @@ export default defineConfig({
           label: "リファレンス",
           translations: {
             en: "Reference",
-            "zh-CN": "参考",
-            "zh-TW": "參考",
+            "zh-cn": "参考",
+            "zh-tw": "參考",
             ko: "참조",
             es: "Referencia",
             de: "Referenz",

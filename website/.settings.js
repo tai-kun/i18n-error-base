@@ -4,8 +4,8 @@ Object.assign(globalThis, {
   __LOCALES: [
     "ja",
     "en",
-    "zh-CN",
-    "zh-TW",
+    "zh-cn",
+    "zh-tw",
     "ko",
     "es",
     "de",
