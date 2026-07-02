@@ -1,6 +1,7 @@
 {
   "name": "@i18n-error-base/website",
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "build": "astro build"
