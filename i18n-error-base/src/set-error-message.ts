@@ -1,30 +1,21 @@
 import getMessageMap from "./_get-message-map.js";
 import type { I18N_ERROR_BASE_SYMBOL } from "./_i18n-error-base-symbol.types.js";
-import type { default as I18nErrorBase, ErrorMeta } from "./i18n-error-base.js";
+import type { default as I18nErrorBase } from "./i18n-error-base.js";
 
 /**
- * エラーのコンストラクターです。
+ * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#i18nerrorbaseconstructor)
  */
 export interface I18nErrorBaseConstructor {
+  /**
+   * @internal
+   */
   readonly [I18N_ERROR_BASE_SYMBOL]: never;
-  new (...args: any): I18nErrorBase<ErrorMeta | undefined>;
+
+  new (...args: any): I18nErrorBase;
 }
 
 /**
- * エラーに特定の言語でエラーメッセージを設定します。
- *
- * @template TReference エラーコンストラクターの型です。
- * @param reference エラーコンストラクターです。
- * @param message エラーメッセージです。
- * @param lang 言語です。
- * @example
- * ```ts
- * setErrorMessage(
- *   TypeError,
- *   meta => `${meta.expected} を期待しましたが、${meta.actual} を得ました`,
- *   "ja",
- * );
- * ```
+ * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#seterrormessage)
  */
 export default function setErrorMessage<TReference extends I18nErrorBaseConstructor>(
   reference: TReference,

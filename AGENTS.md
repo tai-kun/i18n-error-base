@@ -4,19 +4,8 @@ i18n-error-base は、クラス `I18nErrorBase` を提供するライブラリ�
 
 ## プロジェクトの構成
 
-- メインパッケージは `unikvs/` にあります。
-- プラグインを含む全パッケージで共有して使用されるコアパッケージは `packages/core` にあります。
-- 一部のプラグインなどで使用される可能性のある共有ユーティリティーは `packages/utils` にあります。
-- バイト配列を指定の形式で透過的に圧縮/展開するトランスフォーマープラグインは `packages/compression` にあります。
-- バイト配列を指定の形式で透過的にハッシュ値を計算し、期待するハッシュ値と一致するか検証するトランスフォーマーは `packages/checksum` にあります。
-- バイト配列を Node.js でローカルに保存するストレージプラグインは `packages/fs.node` にあります。
-- 任意のデータをブラウザーの IndexedDB に保存するストレージプラグインは `packages/indexeddb` にあります。
-- 任意のデータをメモリー上に保存するストレージプラグインは `packages/memory` にあります。
-- バイト配列をブラウザーの OPFS に保存するストレージプラグインは `packages/opfs` にあります。
-- バイト配列を Node.js で S3 互換のオブジェクトストレージに保存するストレージプラグインは `packages/s3.node` にあります。
-- テスト用の一時コンテナーを作成する内部パッケージは `packages/testcontainer` にあります。
-- モノレポルートの設定ファイル (oxfmt, mise) は `.config/` にあります。
-- 各パッケージのほとんどの設定ファイル (tsconfig, vitest, oxlint, oxfmt, mise) は、パッケージディレクトリーから見て `.config/` にあります。
+- メインパッケージは `i18n-error-base/` にあります。
+- ドキュメントは `website/` にあります。Astro Starlight で構築され、GitHub Pages でホストされます。
 
 ## コマンド
 

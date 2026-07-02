@@ -1,6 +1,11 @@
+packages: ["i18n-error-base", "website"]
+blockExoticSubdeps: true
+ignoredBuiltDependencies: []
+  # - esbuild
+  # - sharp
 minimumReleaseAge: 10080
 minimumReleaseAgeExclude: []
 onlyBuiltDependencies: []
 strictDepBuilds: true
-blockExoticSubdeps: true
 trustPolicy: no-downgrade
+trustPolicyExclude: []

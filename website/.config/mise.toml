@@ -1,0 +1,14 @@
+[tasks.dev]
+run = "npx astro dev"
+
+[tasks.preview]
+run = "npx astro preview"
+
+[tasks.format]
+run = "npx oxfmt --config ./.config/.oxfmtrc.json"
+
+[tasks.lint]
+run = "npx oxlint --config ./.config/.oxlintrc.json"
+
+[tasks.update]
+run = ["npx npm-check-updates --target minor -u --cooldown 7", "pnpm install"]

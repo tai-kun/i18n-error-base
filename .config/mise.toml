@@ -1,49 +1,25 @@
+[settings]
+minimum_release_age = "7d"
+
 [tools]
 node = "24"
 pnpm = "10"
 opencode = "1"
 
 [tasks.test]
-run = [
-  { task = "test:server" },
-  { task = "test:client" },
-  { task = "test:format" },
-  { task = "test:lint" },
-  { task = "test:typecheck" },
-]
+run = [{ task = "test:format" }]
 env = { CI = 1 }
-
-[tasks."test:server"]
-run = "npx vitest --config ./.config/vitest.server.ts"
-
-[tasks."test:client"]
-run = "npx vitest --config ./.config/vitest.client.ts"
 
 [tasks."test:format"]
 run = "npx oxfmt --config ./.config/.oxfmtrc.json --check"
 
-[tasks."test:lint"]
-run = "npx oxlint --config ./.config/.oxlintrc.json"
-
-[tasks."test:typecheck"]
-run = [
-  "npx tsc --noEmit --project ./.config/tsconfig.base.json",
-  "npx tsc --noEmit --project ./.config/tsconfig.test.json",
-  "npx tsc --noEmit --project ./.config/tsconfig.client.json",
-  "npx tsc --noEmit --project ./.config/tsconfig.server.json",
-  "npx tsc --noEmit --project ./.config/tsconfig.config.json",
-]
-
 [tasks.format]
 run = "npx oxfmt --config ./.config/.oxfmtrc.json"
-
-[tasks.lint]
-run = "npx oxlint --config ./.config/.oxlintrc.json"
 
 [tasks.update]
 run = [
   "npx npm-check-updates --target minor -u --cooldown 7 --reject oxfmt --reject oxlint --reject oxlint-tsgolint",
   "pnpm install",
-  "npx playwright install --with-deps",
+  "for d in $(jq -r '.workspaces[]' package.json | xargs ls -d); do (cd \"$d\" && mise run update); done",
   "pnpm audit",
 ]

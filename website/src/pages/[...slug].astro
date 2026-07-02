@@ -1,0 +1,348 @@
+---
+import { getCollection } from "astro:content";
+
+import "../../.settings";
+
+/**
+ * Astro の静的サイト生成のためのパス設定を生成します。
+ *
+ * ドキュメントの slug から言語、バージョン、パスを解析し、適切なリダイレクト先を含むルート情報を構築します。
+ *
+ * @returns 静的パスの配列を含むオブジェクトの Promise です。
+ */
+export async function getStaticPaths() {
+  /**
+   * サポートされているロケールの型定義です。
+   */
+  type Locale = (typeof __LOCALES)[number];
+
+  /**
+   * slug から言語、バージョン、残りのパスを抽出するための正規表現です。
+   */
+  const SLUG_PARSE_REGEX = new RegExp(`^(${__LOCALES.join("|")})\\/v([0-9]+[^/]*)\\/?(.*)`);
+
+  /**
+   * 指定された slug 文字列を解析して言語、バージョン、パスに分割します。
+   *
+   * @param slug 解析対象の slug 文字列です。
+   * @returns 解析されたロケール、バージョン、残りのパスを含むオブジェクトです。
+   */
+  function parseSlug(slug: string): {
+    locale: Locale;
+    version: string;
+    restPath: string;
+  } {
+    const [, locale, version, restPath] = slug.match(SLUG_PARSE_REGEX) as [
+      string,
+      Locale,
+      string,
+      string,
+    ];
+
+    return {
+      locale,
+      version,
+      restPath,
+    };
+  }
+
+  /** 生成するルート情報を格納するレコードです。 */
+  const routes: Record<string, {
+    params: {
+      slug: string;
+    };
+    props: {
+      entry:
+        | "/"
+        | "/:version/:locale"
+        | "/:version"
+        | "/:locale";
+      title: string;
+      locales: Set<Locale>;
+    };
+  }> = {};
+
+  for (const doc of await getCollection("docs")) {
+    const {
+      id: slug,
+      data,
+    } = doc;
+
+    // 下書き状態のドキュメントはスキップします。
+    if (data.draft) {
+      continue;
+    }
+
+    const {
+      locale,
+      version,
+      restPath,
+    } = parseSlug(slug);
+
+    // ルートパス用の設定を構築します。
+    {
+      const slug = restPath;
+      const path = routes[slug] ||= {
+        params: {
+          slug,
+        },
+        props: {
+          entry: "/",
+          title: data.title,
+          locales: new Set(),
+        },
+      };
+
+      if (locale === __FALLBACK_LOCALE) {
+        path.props.title = data.title;
+      }
+
+      path.props.locales.add(locale);
+    }
+
+    // バージョンと言語を含むパスの設定を構築します。
+    {
+      const slug = restPath ? `v${version}/${locale}/${restPath}` : `v${version}/${locale}`;
+      const path = routes[slug] ||= {
+        params: {
+          slug,
+        },
+        props: {
+          entry: "/:version/:locale",
+          title: data.title,
+          locales: new Set(),
+        },
+      };
+
+      if (locale === __FALLBACK_LOCALE) {
+        path.props.title = data.title;
+      }
+
+      path.props.locales.add(locale);
+    }
+
+    // バージョンのみを含むパスの設定を構築します。
+    {
+      const slug = restPath ? `v${version}/${restPath}` : `v${version}`;
+      const path = routes[slug] ||= {
+        params: {
+          slug,
+        },
+        props: {
+          entry: "/:version",
+          title: data.title,
+          locales: new Set(),
+        },
+      };
+
+      if (locale === __FALLBACK_LOCALE) {
+        path.props.title = data.title;
+      }
+
+      path.props.locales.add(locale);
+    }
+
+    // 言語のみを含むパスの設定を構築します。
+    {
+      const slug = restPath ? `${locale}/${restPath}` : locale;
+      const path = routes[slug] ||= {
+        params: {
+          slug,
+        },
+        props: {
+          entry: "/:locale",
+          title: data.title,
+          locales: new Set(),
+        },
+      };
+
+      if (locale === __FALLBACK_LOCALE) {
+        path.props.title = data.title;
+      }
+
+      path.props.locales.add(locale);
+    }
+  }
+
+  return Object.values(routes).map(route => ({
+    ...route,
+    props: {
+      entry: route.props.entry,
+      title: route.props.title,
+      locales: [...route.props.locales] as const,
+    },
+  }));
+}
+
+type Props = Awaited<ReturnType<typeof getStaticPaths>>[number]["props"];
+
+const {
+  title: titleText,
+  entry,
+  locales,
+} = Astro.props;
+const BASE_PATH = __REPOSITORY_NAME;
+const FALLBACK_LOCALE = __FALLBACK_LOCALE;
+const LATEST_MAJOR_VERSION_NUMBER = __LATEST_MAJOR_VERSION_NUMBER;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark light">
+
+    <title>{titleText}</title>
+
+    <script>
+      declare global {
+        /** サポートされているロケールの配列です。 */
+        var locales: readonly [string, ...string[]];
+        /** URL のベースパスです。 */
+        var BASE_PATH: string;
+        /** フォールバック先として使用されるロケールです。 */
+        var FALLBACK_LOCALE: string;
+        /** パッケージの最新バージョンです。 */
+        var LATEST_MAJOR_VERSION_NUMBER: number;
+      }
+    </script>
+
+    {(() => {
+      switch (entry) {
+        case "/":
+          return (
+            <script
+              is:inline
+              define:vars={{
+                locales,
+                BASE_PATH,
+                FALLBACK_LOCALE,
+                LATEST_MAJOR_VERSION_NUMBER,
+              }}
+            >
+              var redirect = locale => {
+                const pathname = location.pathname.replace(
+                  new RegExp(`^\\/${BASE_PATH}(?:\\/)?`),
+                  `/${BASE_PATH}/${locale}/v${LATEST_MAJOR_VERSION_NUMBER}/`,
+                );
+
+                if (location.pathname === pathname) {
+                  location.pathname = "/404";
+                } else {
+                  location.pathname = pathname;
+                }
+              };
+
+              for (const locale of locales) {
+                if (window.navigator.languages.includes(locale)) {
+                  return redirect(locale);
+                }
+              }
+
+              if (locales.includes(FALLBACK_LOCALE)) {
+                redirect(FALLBACK_LOCALE);
+              } else {
+                redirect(locales[0]);
+              }
+            </script>
+          );
+
+        case "/:locale":
+          return (
+            <script
+              is:inline
+              define:vars={{
+                BASE_PATH,
+                LATEST_MAJOR_VERSION_NUMBER,
+              }}
+            >
+              var redirect = () => {
+                const pathname = location.pathname.replace(
+                  new RegExp(`^\\/${BASE_PATH}\\/([^/]+)(?:\\/)?`),
+                  `/${BASE_PATH}/$1/v${LATEST_MAJOR_VERSION_NUMBER}/`,
+                );
+
+                if (location.pathname === pathname) {
+                  location.pathname = "/404";
+                } else {
+                  location.pathname = pathname;
+                }
+              };
+
+              redirect();
+            </script>
+          );
+
+        case "/:version":
+          return (
+            <script
+              is:inline
+              define:vars={{
+                locales,
+                BASE_PATH,
+                FALLBACK_LOCALE,
+              }}
+            >
+              var redirect = locale => {
+                const pathname = location.pathname.replace(
+                  RegExp(`^\\/${BASE_PATH}\\/([^/]+)(?:\\/)?`),
+                  `/${BASE_PATH}/${locale}/$1/`,
+                );
+
+                if (location.pathname === pathname) {
+                  location.pathname = "/404";
+                } else {
+                  location.pathname = pathname;
+                }
+              };
+
+              for (const locale of locales) {
+                if (window.navigator.languages.includes(locale)) {
+                  return redirect(locale);
+                }
+              }
+
+              if (locales.includes(FALLBACK_LOCALE)) {
+                redirect(FALLBACK_LOCALE);
+              } else {
+                redirect(locales[0]);
+              }
+            </script>
+          );
+
+        case "/:version/:locale":
+          return (
+            <script
+              is:inline
+              define:vars={{
+                BASE_PATH,
+              }}
+            >
+              var redirect = () => {
+                const pathname = location.pathname.replace(
+                  RegExp(`^\\/${BASE_PATH}\\/([^/]+)\\/([^/]+)(?:\\/)?`),
+                  `/${BASE_PATH}/$2/$1/`,
+                );
+
+                if (location.pathname === pathname) {
+                  location.pathname = "/404";
+                } else {
+                  location.pathname = pathname;
+                }
+              };
+
+              redirect();
+            </script>
+          );
+
+        default:
+          entry satisfies never;
+          return null;
+      }
+    })()}
+  </head>
+
+  <body>
+    <p>Redirecting based on your browser language...</p>
+  </body>
+</html>

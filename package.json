@@ -1,50 +1,23 @@
 {
-  "name": "i18n-error-base",
+  "name": "i18n-error-base-monorepo",
   "version": "0.0.0",
-  "description": "Valibot のグローバルな言語設定と連携して、ロケールに応じたエラーメッセージを動的に切り替えられるエラークラスの基底です。",
+  "private": true,
   "homepage": "https://github.com/tai-kun/i18n-error-base",
   "license": "MIT",
   "author": "tai-kun",
   "repository": {
     "url": "https://github.com/tai-kun/i18n-error-base"
   },
-  "files": [
-    "dist",
-    "src",
-    "package.json",
-    "LICENSE",
-    "README.md"
+  "workspaces": [
+    "i18n-error-base",
+    "website"
   ],
   "type": "module",
-  "sideEffects": false,
-  "main": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/src/index.d.ts",
-      "default": "./dist/src/index.js"
-    }
-  },
-  "scripts": {
-    "build": "tsc --project ./.config/tsconfig.build.json"
-  },
   "devDependencies": {
-    "@tsconfig/node24": "^24.0.4",
-    "@tsconfig/strictest": "^2.0.8",
-    "@types/node": "^24.13.2",
-    "@vitest/browser": "^4.1.9",
-    "@vitest/browser-playwright": "^4.1.9",
-    "npm-check-updates": "^22.2.7",
+    "npm-check-updates": "^22.2.0",
     "oxfmt": "0.45.0",
     "oxlint": "1.60.0",
     "oxlint-tsgolint": "0.21.1",
-    "playwright": "^1.61.1",
-    "typescript": "^6.0.3",
-    "vite": "^8.1.0",
-    "vitest": "^4.1.9"
-  },
-  "peerDependencies": {
-    "valibot": "^1.0.0"
-  },
-  "readme": "README.md"
+    "typescript": "^6.0.3"
+  }
 }

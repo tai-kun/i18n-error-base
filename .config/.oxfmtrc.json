@@ -3,9 +3,11 @@
   "ignorePatterns": [
     "**/.history/**",
     "**/.Trash/**",
-    "**/dist/**",
     "**/docs/**",
-    "**/node_modules/**"
+    "**/node_modules/**",
+    "**/packages/**",
+    "**/unikvs/**",
+    "**/website/**"
   ],
   "sortImports": true
 }

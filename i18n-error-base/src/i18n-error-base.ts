@@ -4,7 +4,7 @@ import getMessageMap from "./_get-message-map.js";
 import type { I18N_ERROR_BASE_SYMBOL } from "./_i18n-error-base-symbol.types.js";
 
 /**
- * Error クラスのコンストラクターが受け取るオプションの型です。
+ * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#erroroptions)
  */
 export type ErrorOptions =
   ConstructorParameters<typeof Error> extends [
@@ -15,112 +15,71 @@ export type ErrorOptions =
     : { readonly cause?: unknown }; // ポリフィルです。
 
 /**
- * エラーのメタデータのオブジェクト型です。
+ * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#errormeta)
  */
 export type ErrorMeta = {
   readonly [prop: string]: unknown;
 };
 
 /**
- * エラーメッセージを生成するファクトリー関数の型です。
- *
- * @template TMeta メタデータの型定義です。
+ * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#messagefactory)
  */
 export interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
   (meta: TMeta): string;
 }
 
 /**
- * I18nErrorBase クラスのコンストラクターに渡すパラメーターのタプル型です。
- *
- * @template TMeta メタデータの型定義です。
+ * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#i18nerrorbaseparams)
  */
 export type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> = [
   TMeta,
 ] extends [undefined]
   ?
+      | [message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
       | [
-          /**
-           * エラーメッセージです。
-           */
-          message: string | MessageFactory<TMeta>,
-          /**
-           * Error クラスのオプションです。
-           */
-          options?: ErrorOptions | undefined,
-        ]
-      | [
-          /**
-           * メタデータです。省略する場合は undefined を指定します。
-           */
           meta: undefined,
-          /**
-           * エラーメッセージです。
-           */
           message: string | MessageFactory<TMeta>,
-          /**
-           * Error クラスのオプションです。
-           */
           options?: ErrorOptions | undefined,
         ]
-  : [
-      /**
-       * エラーに付随するメタデータです。
-       */
-      meta: TMeta,
-      /**
-       * エラーメッセージです。
-       */
-      message: string | MessageFactory<TMeta>,
-      /**
-       * Error クラスのオプションです。
-       */
-      options?: ErrorOptions | undefined,
-    ];
+  : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
 
 /**
  * Error クラスを継承するための内部的な基底クラスの型定義です。
  */
 interface _ErrorConstructor extends ErrorConstructor {
+  // I18nErrorBase クラスのインスタンスを識別するシンボルです。
+  // このプロパティーは実際には定義されませんが、型定義に含めることにより、`setErrorMessage` 関数に I18nErrorBase を継承しないクラスが入力されることを防ぐ役割をします。
   /**
-   * I18nErrorBase クラスのインスタンスを識別するシンボルです。
-   *
-   * このプロパティーは実際には定義されませんが、型定義に含めることにより、`setErrorMessage` 関数に I18nErrorBase を継承しないクラスが入力されることを防ぐ役割をします。
+   * @internal
    */
   readonly [I18N_ERROR_BASE_SYMBOL]: never;
 }
 
 /**
- * 国際化対応されたエラーメッセージを提供するエラークラスの基底クラスです。
+ * [Document](https://tai-kun.github.io/i18n-error-base/)
  *
- * @template TMeta エラーに付随するメタデータの型定義です。
+ * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#i18nerrorbase)
  */
 export default class I18nErrorBase<
   TMeta extends ErrorMeta | undefined = ErrorMeta | undefined,
 > extends (Error as _ErrorConstructor) {
   /**
-   * エラーメッセージの先頭に付加する接頭辞です。
-   *
-   * 継承先のクラスで上書きして使用します。
+   * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#i18nerrorbase-static-prefix)
    */
   static prefix?: string;
 
   /**
-   * エラーメッセージです。
-   *
-   * ゲッターであるため、現在の設定言語に基づいて翻訳されたメッセージを取得できます。
+   * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#i18nerrorbase-message)
    */
   public override readonly message!: string;
 
   /**
-   * エラーに付随するメタデータです。
+   * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#i18nerrorbase-meta)
    */
   public meta: TMeta;
 
   /**
-   * I18nErrorBase クラスの新しいインスタンスを初期化します。
-   *
-   * @param params コンストラクターに渡されるパラメーターの配列です。最初の引数にメタデータが渡されるかどうかで構成が変化します。
+   * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#i18nerrorbase-constructor)
    */
   public constructor(...params: I18nErrorBaseParams<TMeta>) {
     const [meta, message, options] = (
