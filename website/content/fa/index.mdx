@@ -1,0 +1,67 @@
+---
+title: i18n-error-base
+description: کلاس پایهٔ ارث‌بری از Error که پیام‌های خطا را هم‌زمان با تنظیم زبان Valibot جابه‌جا می‌کند.
+---
+
+کلاس پایه برای ارث‌بری از `Error` است که `message` را به‌صورت پویا هم‌زمان با تنظیم زبان سراسری (`lang`) در Valibot جابه‌جا می‌کند.
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+setErrorMessage(NotFoundError, ({ resource }) => `リソースが見つかりません: ${resource}`, "ja");
+setErrorMessage(NotFoundError, ({ resource }) => `Resource not found: ${resource}`, "en");
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // リソースが見つかりません: user
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Resource not found: user
+```
+
+از آنجا که `lang` جاری در هر دسترسی به `message` خوانده می‌شود، می‌توان بدون بازسازی نمونه‌ها زبان را عوض کرد. برای زبان‌های ثبت‌نشده، به پیام پیش‌فرض ارسال‌شده به سازنده برمی‌گردد (fallback).
+
+## ویژگی‌ها [#features]
+
+- `message` را به‌صورت پویا در پیوند با `getGlobalConfig()` / `setGlobalConfig({ lang })` در Valibot حل می‌کند
+- پیام‌های هر زبان بعداً با `setErrorMessage` ثبت می‌شوند. می‌توان تابعی را هم ثبت کرد که `meta` را دریافت می‌کند
+- برای زبان‌های ثبت‌نشده به پیام پیش‌فرض سازنده برمی‌گردد
+- با `static prefix` در سطح کلاس می‌توان پیشوندی به ابتدای پیام افزود
+- `meta` را در سازنده نگه می‌دارد و به تابع‌های سازندهٔ پیام می‌سپارد
+- چون از `Error` ارث می‌برد، `instanceof Error` و `cause` و `stack` مثل قبل قابل استفاده‌اند
+- چون محل ذخیرهٔ پیام‌ها `WeakMap` است، کلاس‌های بی‌استفاده زباله‌روبی (garbage collect) می‌شوند
+
+## ساختار [#structure]
+
+<CardGroup cols={2}>
+  <Card title="نصب" href="/fa/installation" icon="download">
+    دربارهٔ افزودن بسته و وابستگی همتا (peer) به Valibot.
+  </Card>
+  <Card title="طرز استفاده" href="/fa/usage" icon="book-open">
+    عملیات پایه از تعریف کلاس تا جابه‌جایی زبان، prefix و fallback.
+  </Card>
+  <Card title="مرجع API" href="/fa/api" icon="code">
+    مشخصات `I18nErrorBase` و `setErrorMessage` و نوع‌های مرتبط.
+  </Card>
+</CardGroup>
+
+## سازوکار [#how-it-works]
+
+سازندهٔ `I18nErrorBase` خصوصیت `message` را به‌عنوان getter تعریف می‌کند. در هر دسترسی به ترتیب زیر حل می‌شود.
+
+1. `lang` را از `getGlobalConfig()` می‌گیرد. اگر تنظیم نشده باشد `"en"` است
+2. اگر تابع ثبت‌شده با `setErrorMessage` برای (کلاس × lang) وجود داشته باشد، آن را با `meta` اجرا می‌کند
+3. در غیر این صورت رشته یا نتیجهٔ تابع ارسال‌شده به سازنده (پیام پیش‌فرض) را برمی‌گرداند
+4. اگر `static prefix` تنظیم شده باشد، آن را به ابتدا می‌چسباند
+
+:::tip
+شکل تابعی پیام پیش‌فرض در نخستین دسترسی ارزیابی و پس از آن کش می‌شود. پیام‌های زبان‌های ثبت‌شده در هر دسترسی دوباره از `meta` ساخته می‌شوند، پس جابه‌جایی زبان بی‌درنگ اعمال می‌شود.
+:::
+
+## گام‌های بعدی [#next-steps]
+
+از [نصب](/fa/installation) شروع کنید و روند کامل را در [طرز استفاده](/fa/usage) ببینید. جزئیات نوع‌ها و آرگومان‌ها در [مرجع API](/fa/api) گرد آمده است.

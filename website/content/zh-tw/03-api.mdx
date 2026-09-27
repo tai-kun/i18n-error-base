@@ -1,0 +1,153 @@
+---
+title: API 參考
+description: I18nErrorBase、setErrorMessage 及相關型別的規格。
+---
+
+## `I18nErrorBase` [#i18n-error-base]
+
+用於繼承 `Error` 的基底類別。將 `message` 重新定義為 getter，並根據 Valibot 的 `lang` 動態解析。
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class MyError extends I18nErrorBase<{ code: string }> {}
+```
+
+### 型別參數 [#type-params]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | 作為 `meta` 保留的附加資訊型別。不使用時請指定 `undefined`。 |
+
+### 靜態屬性 [#static-props]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `prefix?` | `string` | `undefined` | 設定後會串接至解析後訊息的開頭。 |
+
+### 實例屬性 [#instance-props]
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `meta` | `TMeta` | 傳遞給建構函式的附加資訊，可讀寫。 |
+| `message` | `string` | 根據目前 `lang` 解析的訊息，可列舉。 |
+| `cause` | `unknown` | 經 `ErrorOptions` 傳入的原因，`Error` 的標準屬性。 |
+
+### 建構函式 [#constructor]
+
+當 `TMeta` 不包含 `undefined` 時，`meta` 為必填。
+
+```ts
+new MyError(meta, message, options?)
+```
+
+當 `TMeta` 為 `undefined` 時，可以省略 `meta`。
+
+```ts
+new MyError(message, options?)
+new MyError(meta, message, options?)
+```
+
+| 參數 | 型別 | 說明 |
+| ------------ | -- | ---- |
+| `meta` | `TMeta` | 用於訊息產生的附加資訊。 |
+| `message` | `string \| MessageFactory<TMeta>` | 用於未註冊語言的預設訊息。為函式時會接收 `meta`。 |
+| `options` | `ErrorOptions` | 與 `Error` 第二個參數相容的選項（例如 `{ cause }`）。 |
+
+當 `message` 傳入字串以外的值（例如數字）時會經 `String(...)` 轉換為字串。當訊息工廠回傳空字串時，`message` 亦為空字串。
+
+### 解析順序 [#resolution-order]
+
+1. 取得 `getGlobalConfig()` 的 `lang`（未設定時為 `"en"`）
+2. 執行經 `setErrorMessage` 註冊的該類別、該語言函式，並傳入 `meta`
+3. 未註冊時使用建構函式的預設訊息（字串或函式的求值結果，首次求值後快取）
+4. 若存在 `static prefix`，則串接至開頭
+
+:::note
+註冊的比對為 `this.constructor` 的完全一致。父類別的註冊不會被子類別繼承，請依需要的類別分別註冊。
+:::
+
+## `setErrorMessage` [#set-error-message]
+
+註冊各語言的訊息產生函式。
+
+```ts
+import { setErrorMessage } from "i18n-error-base";
+
+setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
+```
+
+| 參數 | 型別 | 說明 |
+| ------------ | -- | ---- |
+| `reference` | `I18nErrorBaseConstructor` | 繼承了 `I18nErrorBase` 的類別。未繼承的類別會導致型別錯誤。 |
+| `message` | `string \| (meta) => string` | 要註冊的訊息。`meta` 的型別自目標類別的 `meta` 推斷。 |
+| `lang` | `string \| Iterable<string>` | 目標語言。單一代碼或代碼的可迭代物件（例如陣列）。 |
+
+字串會在內部轉換為函式後儲存。對同一類別、同一語言的重新註冊會覆寫。儲存位置為 `globalThis.i18n_error_base__message_map` 的 `WeakMap`，鍵為類別，值為從語言到函式的 `Map`。
+
+## 型別 [#types]
+
+### `ErrorMeta` [#error-meta]
+
+```ts
+type ErrorMeta = {
+  readonly [prop: string]: unknown;
+};
+```
+
+`TMeta` 的預設約束，表示具有任意屬性的唯讀物件。
+
+### `ErrorOptions` [#error-options]
+
+```ts
+type ErrorOptions =
+  ConstructorParameters<typeof Error> extends [
+    message?: unknown,
+    options?: (infer TOptions) | undefined,
+  ]
+    ? TOptions
+    : { readonly cause?: unknown };
+```
+
+自執行環境 `Error` 建構函式第二個參數推導出的型別，可傳入包含 `cause` 的選項。後一分支是面向舊版環境的後備方案。
+
+### `MessageFactory<TMeta>` [#message-factory]
+
+```ts
+interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
+  (meta: TMeta): string;
+}
+```
+
+根據 `meta` 產生訊息的函式，既可用於建構函式的預設訊息，亦可用於 `setErrorMessage` 的註冊值。
+
+### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
+
+表示建構函式參數多載的型別。
+
+```ts
+type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
+  [TMeta] extends [undefined]
+    ?
+        | [message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+        | [meta: undefined, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+    : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
+```
+
+僅當 `TMeta` 為 `undefined` 時，才允許省略 `meta` 的形式。
+
+### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
+
+```ts
+interface I18nErrorBaseConstructor {
+  new (...args: any): I18nErrorBase;
+}
+```
+
+`setErrorMessage` 第一個參數的型別。透過內部識別用符號，在型別層級防止混入未繼承 `I18nErrorBase` 的類別。
+
+## 補充說明 [#notes]
+
+- 用於解析 `message` 的 `lang` 預設值為 `"en"`，請透過 `setGlobalConfig({ lang })` 明確切換
+- 不會對語言代碼進行正規化，亦無後備鏈（例如自 `en-US` 退回至 `en`）。未註冊的語言一律使用預設訊息
+- 註冊資料儲存於處理程序全域的 `WeakMap` 中。如需在測試中隔離，可透過 `globalThis.i18n_error_base__message_map = undefined` 捨棄

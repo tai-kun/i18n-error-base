@@ -1,0 +1,49 @@
+---
+title: Instalace
+description: Jak nainstalovat i18n-error-base a požadavky.
+---
+
+## Požadavky [#requirements]
+
+- Běhové prostředí schopné pracovat s ES moduly, například Node.js
+- Jako peer závislost je vyžadován `valibot@^1.0.0`
+
+`I18nErrorBase` interně využívá `getGlobalConfig()` Valibotu k získání aktuálního `lang`. I v projektech, které Valibot jinak nepoužívají, stačí pro fungování volat `setGlobalConfig({ lang })` jen za účelem přepínání jazyka.
+
+## Instalace [#installation]
+
+```package-install
+npm i i18n-error-base
+```
+
+Pokud Valibot ještě není nainstalován, přidejte jej také.
+
+```package-install
+npm i valibot
+```
+
+:::warning[Pozor na peer závislost]
+`i18n-error-base` neobsahuje `valibot`. Pokud hostitelský projekt neposkytne `valibot@^1.0.0`, import se nepodaří resolvovat.
+:::
+
+## Import [#import]
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
+```
+
+K dispozici je také výchozí export.
+
+```ts
+import I18nErrorBase from "i18n-error-base";
+import setErrorMessage from "i18n-error-base";
+```
+
+:::note
+Balíček je distribuován jako ESM (`"type": "module"`) bez vedlejších efektů (`"sideEffects": false`). Typové definice se resolvují z `dist/src/*.d.ts`.
+:::
+
+## Další kroky [#next-steps]
+
+V části [Použití](/cs/usage) se seznamte s definicí chybových tříd a základy přepínání jazyků.

@@ -1,0 +1,153 @@
+---
+title: API-Referenz
+description: Spezifikation von I18nErrorBase, setErrorMessage und der zugehörigen Typen.
+---
+
+## `I18nErrorBase` [#i18n-error-base]
+
+Die Basisklasse zur Erweiterung von `Error`. Sie definiert `message` als Getter neu und löst es dynamisch anhand von `lang` aus Valibot auf.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class MyError extends I18nErrorBase<{ code: string }> {}
+```
+
+### Typparameter [#type-params]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Der Typ der Zusatzinformationen, die als `meta` gespeichert werden. Geben Sie `undefined` an, wenn Sie sie nicht verwenden. |
+
+### Statische Eigenschaften [#static-props]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `prefix?` | `string` | `undefined` | Wenn gesetzt, wird es am Anfang der aufgelösten Nachricht verkettet. |
+
+### Instanzeigenschaften [#instance-props]
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `meta` | `TMeta` | Die im Konstruktor übergebenen Zusatzinformationen. Lesbar und schreibbar. |
+| `message` | `string` | Die entsprechend dem aktuellen `lang` aufgelöste Nachricht. Aufzählbar. |
+| `cause` | `unknown` | Die über `ErrorOptions` übergebene Ursache. Eine Standard-Eigenschaft von `Error`. |
+
+### Konstruktor [#constructor]
+
+Wenn `TMeta` kein `undefined` enthält, ist `meta` erforderlich.
+
+```ts
+new MyError(meta, message, options?)
+```
+
+Wenn `TMeta` den Wert `undefined` hat, kann `meta` weggelassen werden.
+
+```ts
+new MyError(message, options?)
+new MyError(meta, message, options?)
+```
+
+| Parameter | Typ | Beschreibung |
+| --------- | --- | ------------ |
+| `meta` | `TMeta` | Die zur Nachrichtenerzeugung verwendeten Zusatzinformationen. |
+| `message` | `string \| MessageFactory<TMeta>` | Die Standardnachricht für Sprachen ohne Registrierung. Wenn es eine Funktion ist, erhält sie `meta`. |
+| `options` | `ErrorOptions` | Optionen, die mit dem zweiten Argument von `Error` kompatibel sind (z. B. `{ cause }`). |
+
+Wenn als `message` ein Nicht-Zeichenkettenwert (z. B. eine Zahl) übergeben wird, wird er mit `String(...)` in eine Zeichenkette umgewandelt. Wenn eine Nachrichtenfabrik eine leere Zeichenkette zurückgibt, ist auch `message` eine leere Zeichenkette.
+
+### Auflösungsreihenfolge [#resolution-order]
+
+1. Holt `lang` aus `getGlobalConfig()` (wenn nicht gesetzt, `"en"`)
+2. Führt die mit `setErrorMessage` für diese Klasse und Sprache registrierte Funktion mit `meta` aus
+3. Wenn nicht registriert, wird die Standardnachricht des Konstruktors verwendet (Zeichenkette oder ausgewertetes Funktionsergebnis; nach der ersten Auswertung zwischengespeichert)
+4. Falls `static prefix` vorhanden ist, wird es am Anfang verkettet
+
+:::note
+Der Abgleich von Registrierungen erfolgt per strikter Gleichheit von `this.constructor`. Registrierungen auf einer Elternklasse werden nicht an Unterklassen vererbt. Registrieren Sie jede benötigte Klasse einzeln.
+:::
+
+## `setErrorMessage` [#set-error-message]
+
+Registriert eine Nachrichtenerzeugungsfunktion pro Sprache.
+
+```ts
+import { setErrorMessage } from "i18n-error-base";
+
+setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
+```
+
+| Parameter | Typ | Beschreibung |
+| --------- | --- | ------------ |
+| `reference` | `I18nErrorBaseConstructor` | Eine Klasse, die `I18nErrorBase` erweitert. Klassen ohne diese Vererbung führen zu einem Typfehler. |
+| `message` | `string \| (meta) => string` | Die zu registrierende Nachricht. Der Typ von `meta` wird aus dem `meta` der Zielklasse abgeleitet. |
+| `lang` | `string \| Iterable<string>` | Die Zielsprache. Ein einzelner Code oder ein iterierbares Objekt aus Codes (z. B. ein Array). |
+
+Zeichenketten werden intern vor der Speicherung in Funktionen umgewandelt. Eine erneute Registrierung derselben Klasse und Sprache überschreibt den Eintrag. Die Daten werden in der `WeakMap` unter `globalThis.i18n_error_base__message_map` gespeichert, mit der Klasse als Schlüssel und einer `Map` von Sprache zu Funktion als Wert.
+
+## Typen [#types]
+
+### `ErrorMeta` [#error-meta]
+
+```ts
+type ErrorMeta = {
+  readonly [prop: string]: unknown;
+};
+```
+
+Die Standard-Einschränkung für `TMeta`. Stellt ein schreibgeschütztes Objekt mit beliebigen Eigenschaften dar.
+
+### `ErrorOptions` [#error-options]
+
+```ts
+type ErrorOptions =
+  ConstructorParameters<typeof Error> extends [
+    message?: unknown,
+    options?: (infer TOptions) | undefined,
+  ]
+    ? TOptions
+    : { readonly cause?: unknown };
+```
+
+Ein Typ, der vom zweiten Argument des `Error`-Konstruktors der Laufzeitumgebung abgeleitet ist. Es können Optionen einschließlich `cause` übergeben werden. Der letztere Zweig ist ein Fallback für ältere Umgebungen.
+
+### `MessageFactory<TMeta>` [#message-factory]
+
+```ts
+interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
+  (meta: TMeta): string;
+}
+```
+
+Eine Funktion, die aus `meta` eine Nachricht erzeugt. Sie kann sowohl für die Standardnachricht des Konstruktors als auch für mit `setErrorMessage` registrierte Werte verwendet werden.
+
+### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
+
+Ein Typ, der die Überladungen der Konstruktorargumente darstellt.
+
+```ts
+type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
+  [TMeta] extends [undefined]
+    ?
+        | [message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+        | [meta: undefined, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+    : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
+```
+
+Die Kurzform ohne `meta` ist nur zulässig, wenn `TMeta` den Wert `undefined` hat.
+
+### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
+
+```ts
+interface I18nErrorBaseConstructor {
+  new (...args: any): I18nErrorBase;
+}
+```
+
+Der Typ des ersten Arguments von `setErrorMessage`. Durch ein internes Identifizierungssymbol wird auf Typebene verhindert, dass Klassen ohne Vererbung von `I18nErrorBase` eingeschleust werden.
+
+## Hinweise [#notes]
+
+- Der Standardwert von `lang`, der zur Auflösung von `message` verwendet wird, lautet `"en"`. Wechseln Sie ihn explizit mit `setGlobalConfig({ lang })`
+- Es gibt weder eine Normalisierung von Sprachcodes noch eine Fallback-Kette (z. B. Rückfall von `en-US` auf `en`). Nicht registrierte Sprachen ergeben einheitlich die Standardnachricht
+- Registrierungsdaten werden in einer prozessweiten `WeakMap` gespeichert. Um Tests zu isolieren, verwerfen Sie sie mit `globalThis.i18n_error_base__message_map = undefined`

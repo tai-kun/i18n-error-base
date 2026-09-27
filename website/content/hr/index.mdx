@@ -1,0 +1,67 @@
+---
+title: i18n-error-base
+description: Osnovna klasa za Error koja prebacuje poruke o pogreškama u skladu s jezičnom postavkom Valibota.
+---
+
+Osnovna klasa za nasljeđivanje klase `Error` koja dinamički prebacuje `message` u skladu s Valibot globalnom jezičnom postavkom (`lang`).
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+setErrorMessage(NotFoundError, ({ resource }) => `リソースが見つかりません: ${resource}`, "ja");
+setErrorMessage(NotFoundError, ({ resource }) => `Resource not found: ${resource}`, "en");
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // リソースが見つかりません: user
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Resource not found: user
+```
+
+Budući da se `lang` u trenutku pristupa svojstvu `message` referencira, jezik se može prebaciti bez ponovnog stvaranja instance. Za jezike bez registracije koristi se zamjenska zadana poruka predana konstruktoru.
+
+## Značajke [#features]
+
+- Povezuje se s Valibot metodama `getGlobalConfig()` / `setGlobalConfig({ lang })` i dinamički razrješava `message`
+- Poruke za svaki jezik naknadno se registriraju pomoću `setErrorMessage`. Mogu se registrirati i funkcije koje primaju `meta`
+- Za jezike bez registracije koristi se zadana poruka iz konstruktora
+- Pomoću `static prefix` po klasi može se dodati prefiks na početak poruke
+- `meta` se čuva u konstruktoru i prosljeđuje funkciji za generiranje poruke
+- Budući da nasljeđuje `Error`, `instanceof Error`, `cause` i `stack` mogu se koristiti izravno
+- Poruke se pohranjuju u `WeakMap`, pa se nepotrebne klase prikupljaju sakupljačem smeća
+
+## Struktura [#structure]
+
+<CardGroup cols={2}>
+  <Card title="Instalacija" href="/hr/installation" icon="download">
+    O dodavanju paketa i peer ovisnosti o Valibotu.
+  </Card>
+  <Card title="Korištenje" href="/hr/usage" icon="book-open">
+    Osnovne operacije od definiranja klase do prebacivanja jezika, prefiksa i zamjenske poruke.
+  </Card>
+  <Card title="API referenca" href="/hr/api" icon="code">
+    Specifikacija za `I18nErrorBase` i `setErrorMessage` te povezane tipove.
+  </Card>
+</CardGroup>
+
+## Kako funkcionira [#how-it-works]
+
+Konstruktor klase `I18nErrorBase` definira `message` kao getter. Pri svakom pristupu razrješava se sljedećim redoslijedom.
+
+1. Dohvaća `lang` iz `getGlobalConfig()`. Ako nije postavljeno, vrijednost je `"en"`
+2. Ako postoji funkcija `(klasa × lang)` registrirana pomoću `setErrorMessage`, izvršava je s proslijeđenim `meta`
+3. U suprotnom vraća string predan konstruktoru ili rezultat funkcije (zadana poruka)
+4. Ako je postavljen `static prefix`, dodaje ga na početak
+
+:::tip
+Funkcijski oblik zadane poruke procjenjuje se pri prvom pristupu i potom se sprema u predmemoriju. Poruke registriranih jezika regeneriraju se iz `meta` pri svakom pristupu, pa se prebacivanje jezika odražava odmah.
+:::
+
+## Sljedeći koraci [#next-steps]
+
+Započnite s [instalacijom](/hr/installation) i provjerite cijeli tijek u [korištenju](/hr/usage). Detalje o tipovima i argumentima saželi smo u [API referenci](/hr/api).

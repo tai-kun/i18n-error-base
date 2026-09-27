@@ -1,0 +1,153 @@
+---
+title: API referenca
+description: Specifikacija za I18nErrorBase, setErrorMessage i povezane tipove.
+---
+
+## `I18nErrorBase` [#i18n-error-base]
+
+Osnovna klasa za nasljeđivanje klase `Error`. Ponovno definira `message` kao getter i dinamički ga razrješava prema Valibot postavci `lang`.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class MyError extends I18nErrorBase<{ code: string }> {}
+```
+
+### Parametri tipa [#type-params]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Tip pratećih informacija koje se čuvaju kao `meta`. Ako se ne koristi, navedite `undefined`. |
+
+### Statička svojstva [#static-props]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `prefix?` | `string` | `undefined` | Ako se postavi, dodaje se na početak razriješene poruke. |
+
+### Svojstva instance [#instance-props]
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `meta` | `TMeta` | Prateće informacije predane konstruktoru. Mogu se čitati i pisati. |
+| `message` | `string` | Poruka razriješena prema trenutnom `lang`. Može se nabrojiti. |
+| `cause` | `unknown` | Uzrok predan putem `ErrorOptions`. Standardno svojstvo klase `Error`. |
+
+### Konstruktor [#constructor]
+
+Ako `TMeta` ne uključuje `undefined`, `meta` je obavezan.
+
+```ts
+new MyError(meta, message, options?)
+```
+
+Ako je `TMeta` tipa `undefined`, `meta` se može izostaviti.
+
+```ts
+new MyError(message, options?)
+new MyError(meta, message, options?)
+```
+
+| Parametar | Tip | Opis |
+| --------- | --- | ---- |
+| `meta` | `TMeta` | Prateće informacije koje se koriste za generiranje poruke. |
+| `message` | `string \| MessageFactory<TMeta>` | Zadana poruka koja se koristi za jezike bez registracije. Ako je funkcija, prima `meta`. |
+| `options` | `ErrorOptions` | Opcije kompatibilne s drugim argumentom konstruktora `Error` (npr. `{ cause }`). |
+
+Ako se za `message` proslijedi nešto što nije string (npr. broj), pretvara se u string pomoću `String(...)`. Ako funkcija za izradu poruke vrati prazan string, i `message` će biti prazan string.
+
+### Redoslijed razrješavanja [#resolution-order]
+
+1. Dohvaća `lang` iz `getGlobalConfig()` (kada nije postavljeno, `"en"`)
+2. Izvršava funkciju za dotičnu klasu i dotični jezik registriranu pomoću `setErrorMessage`, s proslijeđenim `meta`
+3. Ako nije registrirano, koristi zadanu poruku iz konstruktora (string ili rezultat procjene funkcije; nakon prve procjene sprema se u predmemoriju)
+4. Ako postoji `static prefix`, dodaje ga na početak
+
+:::note
+Podudaranje registracije je stroga jednakost s `this.constructor`. Registracija na roditeljskoj klasi ne nasljeđuje se na podređenu klasu. Registrirajte poruku za svaku potrebnu klasu.
+:::
+
+## `setErrorMessage` [#set-error-message]
+
+Registrira funkciju za izradu poruke za svaki jezik.
+
+```ts
+import { setErrorMessage } from "i18n-error-base";
+
+setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
+```
+
+| Parametar | Tip | Opis |
+| --------- | --- | ---- |
+| `reference` | `I18nErrorBaseConstructor` | Klasa koja nasljeđuje `I18nErrorBase`. Klase koje ga ne nasljeđuju uzrokuju pogrešku tipa. |
+| `message` | `string \| (meta) => string` | Poruka za registraciju. Tip `meta` izvodi se iz `meta` ciljane klase. |
+| `lang` | `string \| Iterable<string>` | Ciljani jezik. Jedan jezični kod ili iterabilni objekt kodova (npr. polje). |
+
+Stringovi se interno pretvaraju u funkcije i čuvaju. Ponovna registracija za istu klasu i isti jezik prepisuje prethodnu vrijednost. Pohranjuje se u `WeakMap` na `globalThis.i18n_error_base__message_map`, pri čemu je ključ klasa, a vrijednost `Map` od jezika do funkcije.
+
+## Tipovi [#types]
+
+### `ErrorMeta` [#error-meta]
+
+```ts
+type ErrorMeta = {
+  readonly [prop: string]: unknown;
+};
+```
+
+Zadano ograničenje za `TMeta`. Predstavlja objekt samo za čitanje s proizvoljnim svojstvima.
+
+### `ErrorOptions` [#error-options]
+
+```ts
+type ErrorOptions =
+  ConstructorParameters<typeof Error> extends [
+    message?: unknown,
+    options?: (infer TOptions) | undefined,
+  ]
+    ? TOptions
+    : { readonly cause?: unknown };
+```
+
+Tip izveden iz drugog argumenta konstruktora `Error` u izvršnom okruženju. Mogu se proslijediti opcije koje sadrže `cause`. Druga grana je zamjenska vrijednost za starija okruženja.
+
+### `MessageFactory<TMeta>` [#message-factory]
+
+```ts
+interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
+  (meta: TMeta): string;
+}
+```
+
+Funkcija koja generira poruku iz `meta`. Može se koristiti i kao zadana poruka konstruktora i kao registrirana vrijednost u `setErrorMessage`.
+
+### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
+
+Tip koji predstavlja preopterećenja argumenata konstruktora.
+
+```ts
+type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
+  [TMeta] extends [undefined]
+    ?
+        | [message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+        | [meta: undefined, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+    : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
+```
+
+Skraćeni oblik bez `meta` dopušten je samo kada je `TMeta` tipa `undefined`.
+
+### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
+
+```ts
+interface I18nErrorBaseConstructor {
+  new (...args: any): I18nErrorBase;
+}
+```
+
+Tip prvog argumenta metode `setErrorMessage`. Internim simbolom za identifikaciju sprječava se na razini tipa miješanje klasa koje ne nasljeđuju `I18nErrorBase`.
+
+## Napomene [#notes]
+
+- Zadana vrijednost `lang` koja se koristi za razrješavanje `message` je `"en"`. Izričito prebacite pomoću `setGlobalConfig({ lang })`
+- Nema normalizacije jezičnih kodova ni lanca zamjenskih jezika (npr. povratak s `en-US` na `en`). Neregistrirani jezici uvijek daju zadanu poruku
+- Registrirani podaci čuvaju se u `WeakMap` cijelog procesa. Ako ih želite izolirati u testovima, možete ih odbaciti s `globalThis.i18n_error_base__message_map = undefined`

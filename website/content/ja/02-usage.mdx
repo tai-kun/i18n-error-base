@@ -3,7 +3,7 @@ title: 使い方
 description: エラークラスの定義、メッセージ登録、言語切り替え、prefix、フォールバックの基本操作。
 ---
 
-## 基本の流れ
+## 基本の流れ [#basic-flow]
 
 <Steps>
   <Step title="エラークラスを定義する">
@@ -42,7 +42,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Code: ERR, Limit: 50
 ```
 
-## エラークラスを定義する
+## エラークラスを定義する [#define-error-class]
 
 `TMeta` はメッセージ生成に使う付随情報の型です。`error.meta` として保持され、`setErrorMessage` の関数にも渡されます。
 
@@ -79,7 +79,7 @@ console.log(a.meta); // undefined
 `I18nErrorBase` 自体を直接 `new` することは想定していません。必ず継承した具象クラスを作って使ってください。メッセージの登録先はコンストラクター単位（`this.constructor`）で区別されるため、親クラスに登録したメッセージが子クラスに引き継がれることはありません。
 :::
 
-## メッセージを登録する
+## メッセージを登録する [#register-message]
 
 `setErrorMessage` はクラスと言語に対するメッセージ作成関数を登録します。
 
@@ -105,7 +105,7 @@ setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 既定メッセージの関数形式は初回アクセス時に評価してキャッシュされます。`setErrorMessage` より前に未登録言語で `message` を読むと、その既定値が固定されます。言語ごとのメッセージは原則としてインスタンス生成より前に登録してください。
 :::
 
-## 言語を切り替える
+## 言語を切り替える [#switch-language]
 
 言語は Valibot のグローバル設定で切り替えます。`message` はアクセスのたびに現在の `lang` を参照します。
 
@@ -128,7 +128,7 @@ setGlobalConfig({ lang: "fr" });
 console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 ```
 
-## 接頭辞を付ける
+## 接頭辞を付ける [#prefix]
 
 クラスに `static prefix` を設定すると、解決後のメッセージ先頭に連結されます。翻訳メッセージと既定メッセージのどちらにも適用されます。
 
@@ -151,16 +151,16 @@ console.log(error.message); // "[ERROR] fallback"
 
 設定しない場合は接頭辞なしでそのまま返ります。
 
-## Error としての振る舞い
+## Error としての振る舞い [#error-behavior]
 
 - `error instanceof Error`、`instanceof I18nErrorBase`、`instanceof 具象クラス` のいずれも `true` です
 - `message` は列挙可能です（`Object.keys(error)` に含まれます）
 - `String(error)` / `error.toString()` は解決後のメッセージを含みます（例: `"Error: ..."`）
 - `cause` は `new TestError(meta, message, { cause })` で保持されます。古い実行環境向けのポリフィルとして、`cause` 未対応時に `options.cause` を代入する処理が入っています
 
-## よくあるパターン
+## よくあるパターン [#common-patterns]
 
-### 既定メッセージをコンストラクターで固定する
+### 既定メッセージをコンストラクターで固定する [#fix-default-message-in-constructor]
 
 ```ts
 class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
@@ -172,7 +172,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 
 呼び出し側は `meta` だけを意識すればよく、既定文（ここでは英語）の重複を避けられます。
 
-### 複数言語をまとめて登録する
+### 複数言語をまとめて登録する [#register-multiple-languages]
 
 ```ts
 setErrorMessage(MyError, "エラーが発生しました", ["ja"]);

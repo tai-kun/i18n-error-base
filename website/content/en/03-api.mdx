@@ -1,0 +1,153 @@
+---
+title: API Reference
+description: Specifications for I18nErrorBase, setErrorMessage, and related types.
+---
+
+## `I18nErrorBase` [#i18n-error-base]
+
+A base class for extending `Error`. It redefines `message` as a getter and resolves it dynamically based on Valibot's `lang`.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class MyError extends I18nErrorBase<{ code: string }> {}
+```
+
+### Type parameters [#type-params]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | The type of the auxiliary information kept as `meta`. Specify `undefined` when you do not use it. |
+
+### Static properties [#static-props]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `prefix?` | `string` | `undefined` | When set, it is prepended to the resolved message. |
+
+### Instance properties [#instance-props]
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `meta` | `TMeta` | The auxiliary information passed to the constructor. Readable and writable. |
+| `message` | `string` | The message resolved for the current `lang`. Enumerable. |
+| `cause` | `unknown` | The cause passed via `ErrorOptions`. A standard `Error` property. |
+
+### Constructor [#constructor]
+
+When `TMeta` does not include `undefined`, `meta` is required.
+
+```ts
+new MyError(meta, message, options?)
+```
+
+When `TMeta` is `undefined`, `meta` can be omitted.
+
+```ts
+new MyError(message, options?)
+new MyError(meta, message, options?)
+```
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `meta` | `TMeta` | The auxiliary information used for message generation. |
+| `message` | `string \| MessageFactory<TMeta>` | The default message used for languages with no registration. When it is a function, it receives `meta`. |
+| `options` | `ErrorOptions` | Options compatible with the second argument of `Error` (such as `{ cause }`). |
+
+Passing a non-string value (such as a number) as `message` stringifies it with `String(...)`. When a message factory returns an empty string, `message` is also an empty string.
+
+### Resolution order [#resolution-order]
+
+1. Get `lang` from `getGlobalConfig()` (`"en"` when unset)
+2. Run the function registered with `setErrorMessage` for that class and language with `meta`
+3. When unregistered, use the constructor's default message (a string or the evaluated result of a function; cached after the first evaluation)
+4. If `static prefix` is set, prepend it to the beginning
+
+:::note
+Registrations are matched by strict equality on `this.constructor`. Registrations on a parent class are not inherited by child classes. Register each class you need.
+:::
+
+## `setErrorMessage` [#set-error-message]
+
+Registers a message factory function per language.
+
+```ts
+import { setErrorMessage } from "i18n-error-base";
+
+setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
+```
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `reference` | `I18nErrorBaseConstructor` | A class extending `I18nErrorBase`. Classes that do not extend it are a type error. |
+| `message` | `string \| (meta) => string` | The message to register. The type of `meta` is inferred from the target class's `meta`. |
+| `lang` | `string \| Iterable<string>` | The target language. A single code or an iterable of codes (such as an array). |
+
+Strings are converted to functions internally before being stored. Re-registering the same class and language overwrites the previous entry. Data is stored in the `WeakMap` at `globalThis.i18n_error_base__message_map`, keyed by class with values mapping languages to functions.
+
+## Types [#types]
+
+### `ErrorMeta` [#error-meta]
+
+```ts
+type ErrorMeta = {
+  readonly [prop: string]: unknown;
+};
+```
+
+The default constraint for `TMeta`. Represents a readonly object with arbitrary properties.
+
+### `ErrorOptions` [#error-options]
+
+```ts
+type ErrorOptions =
+  ConstructorParameters<typeof Error> extends [
+    message?: unknown,
+    options?: (infer TOptions) | undefined,
+  ]
+    ? TOptions
+    : { readonly cause?: unknown };
+```
+
+A type derived from the second argument of the runtime's `Error` constructor. You can pass options including `cause`. The latter branch is a fallback for older environments.
+
+### `MessageFactory<TMeta>` [#message-factory]
+
+```ts
+interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
+  (meta: TMeta): string;
+}
+```
+
+A function that generates a message from `meta`. Used both for the constructor's default message and for values registered with `setErrorMessage`.
+
+### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
+
+A type representing the constructor argument overloads.
+
+```ts
+type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
+  [TMeta] extends [undefined]
+    ?
+        | [message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+        | [meta: undefined, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+    : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
+```
+
+The `meta`-less form is allowed only when `TMeta` is `undefined`.
+
+### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
+
+```ts
+interface I18nErrorBaseConstructor {
+  new (...args: any): I18nErrorBase;
+}
+```
+
+The type of the first argument of `setErrorMessage`. An internal identifying symbol prevents classes that do not extend `I18nErrorBase` from slipping in at the type level.
+
+## Notes [#notes]
+
+- The default `lang` used to resolve `message` is `"en"`. Switch it explicitly with `setGlobalConfig({ lang })`
+- There is no normalization of language codes and no fallback chain (e.g. falling back from `en-US` to `en`). Unregistered languages always yield the default message
+- Registration data is kept in a process-wide `WeakMap`. To isolate tests, discard it with `globalThis.i18n_error_base__message_map = undefined`

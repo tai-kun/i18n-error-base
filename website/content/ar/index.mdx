@@ -1,0 +1,67 @@
+---
+title: i18n-error-base
+description: فئة أساسية لوراثة Error تُبدِّل رسائل الخطأ بالتزامن مع إعداد اللغة في Valibot.
+---
+
+فئة أساسية لوراثة `Error` تُبدِّل `message` ديناميكيًا بالتزامن مع إعداد اللغة العالمي (`lang`) في Valibot.
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+setErrorMessage(NotFoundError, ({ resource }) => `リソースが見つかりません: ${resource}`, "ja");
+setErrorMessage(NotFoundError, ({ resource }) => `Resource not found: ${resource}`, "en");
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // リソースが見つかりません: user
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Resource not found: user
+```
+
+نظرًا لأن قيمة `lang` الحالية تُقرأ عند كل وصول إلى `message`، يمكن تبديل اللغة دون إعادة إنشاء النسخ. وبالنسبة للغات غير المسجلة، يتم التراجع إلى الرسالة الافتراضية المُمرَّرة إلى المُنشئ.
+
+## الميزات [#features]
+
+- يحلّ `message` ديناميكيًا بالتزامن مع `getGlobalConfig()` / `setGlobalConfig({ lang })` في Valibot
+- تُسجَّل الرسائل الخاصة بكل لغة لاحقًا عبر `setErrorMessage`. ويمكن أيضًا تسجيل دوال تستقبل `meta`
+- بالنسبة للغات غير المسجلة، يتم التراجع إلى الرسالة الافتراضية للمُنشئ
+- يمكن إضافة بادئة إلى بداية الرسالة عبر `static prefix` على مستوى الفئة
+- يُحفَظ `meta` في المُنشئ ويُمرَّر إلى دوال إنشاء الرسائل
+- نظرًا لوراثة `Error`، تبقى `instanceof Error` و`cause` و`stack` صالحة للاستخدام كما هي
+- تُخزَّن الرسائل في `WeakMap`، لذلك تُجمَع الفئات التي لم تعد مطلوبة بواسطة جامع القمامة
+
+## البنية [#structure]
+
+<CardGroup cols={2}>
+  <Card title="التثبيت" href="/ar/installation" icon="download">
+    حول إضافة الحزمة واعتمادية النظير على Valibot.
+  </Card>
+  <Card title="الاستخدام" href="/ar/usage" icon="book-open">
+    العمليات الأساسية من تعريف الفئات إلى تبديل اللغة والبادئة والتراجع.
+  </Card>
+  <Card title="مرجع API" href="/ar/api" icon="code">
+    مواصفات `I18nErrorBase` و`setErrorMessage` والأنواع المرتبطة.
+  </Card>
+</CardGroup>
+
+## آلية العمل [#how-it-works]
+
+يُعرِّف مُنشئ `I18nErrorBase` الخاصية `message` كدالة وصول (getter). وتُحَلّ بالترتيب التالي عند كل وصول.
+
+1. يحصل على `lang` من `getGlobalConfig()`. وعند عدم ضبطه تكون القيمة `"en"`
+2. إذا وُجدت دالة مسجلة عبر `setErrorMessage` لـ(الفئة × اللغة)، تُنفَّذ مع تمرير `meta`
+3. وإلا تُرجَع الرسالة الافتراضية المُمرَّرة إلى المُنشئ (سلسلة نصية أو نتيجة دالة)
+4. إذا ضُبط `static prefix` يُوصَل في البداية
+
+:::tip
+يُقيَّم الشكل الدالّي للرسالة الافتراضية عند أول وصول ثم يُخزَّن مؤقتًا بعد ذلك. أما رسائل اللغات المسجلة فيُعاد إنشاؤها من `meta` عند كل وصول، لذلك ينعكس تبديل اللغة فورًا.
+:::
+
+## الخطوات التالية [#next-steps]
+
+ابدأ من [التثبيت](/ar/installation)، ثم تحقق من التدفق الكامل في [الاستخدام](/ar/usage). أما تفاصيل الأنواع والوسائط فهي موثقة في [مرجع API](/ar/api).

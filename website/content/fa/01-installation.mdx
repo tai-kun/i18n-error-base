@@ -1,0 +1,49 @@
+---
+title: نصب
+description: روش نصب i18n-error-base و نیازمندی‌های اجرایی.
+---
+
+## پیش‌نیازها [#requirements]
+
+- محیط اجرایی که بتواند ماژول‌های ES را مدیریت کند، مانند Node.js
+- به‌عنوان وابستگی همتا (peer) به `valibot@^1.0.0` نیاز است
+
+`I18nErrorBase` در داخل به `getGlobalConfig()` در Valibot رجوع می‌کند و `lang` جاری را می‌گیرد. حتی در پروژه‌هایی که از Valibot استفاده نمی‌کنند، کافی است فقط برای جابه‌جایی زبان `setGlobalConfig({ lang })` را فراخوانی کنید تا کار کند.
+
+## نصب [#installation]
+
+```package-install
+npm i i18n-error-base
+```
+
+اگر Valibot هنوز نصب نشده است، آن را هم اضافه کنید.
+
+```package-install
+npm i valibot
+```
+
+:::warning[توجه به وابستگی همتا]
+`i18n-error-base` بستهٔ `valibot` را باندل نمی‌کند. اگر سمت میزبان `valibot@^1.0.0` را آماده نکند، هنگام ایمپورت خطای حل (resolution) رخ می‌دهد.
+:::
+
+## ایمپورت [#import]
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
+```
+
+اکسپورت پیش‌فرض هم فراهم شده است.
+
+```ts
+import I18nErrorBase from "i18n-error-base";
+import setErrorMessage from "i18n-error-base";
+```
+
+:::note
+بسته به‌صورت ESM (`"type": "module"`) توزیع می‌شود و اثر جانبی ندارد (`"sideEffects": false`). تعریف‌های نوع از `dist/src/*.d.ts` حل می‌شوند.
+:::
+
+## گام‌های بعدی [#next-steps]
+
+در [طرز استفاده](/fa/usage) تعریف کلاس خطا و مبانی جابه‌جایی زبان را بررسی کنید.

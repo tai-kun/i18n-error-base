@@ -1,0 +1,49 @@
+---
+title: Cài đặt
+description: Cách cài đặt i18n-error-base và yêu cầu hoạt động.
+---
+
+## Yêu cầu [#requirements]
+
+- Môi trường thực thi có thể xử lý ES module như Node.js
+- Yêu cầu `valibot@^1.0.0` dưới dạng peer dependency
+
+`I18nErrorBase` tham chiếu `getGlobalConfig()` của Valibot bên trong để lấy `lang` hiện tại. Ngay cả dự án không dùng Valibot, chỉ cần gọi `setGlobalConfig({ lang })` để chuyển ngôn ngữ là vẫn hoạt động.
+
+## Cài đặt [#installation]
+
+```package-install
+npm i i18n-error-base
+```
+
+Nếu chưa cài Valibot, hãy thêm cùng lúc.
+
+```package-install
+npm i valibot
+```
+
+:::warning[Lưu ý về peer dependency]
+`i18n-error-base` không bundle `valibot`. Nếu phía host không chuẩn bị `valibot@^1.0.0`, sẽ xảy ra lỗi giải quyết khi import.
+:::
+
+## Import [#import]
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
+```
+
+Cũng cung cấp export mặc định.
+
+```ts
+import I18nErrorBase from "i18n-error-base";
+import setErrorMessage from "i18n-error-base";
+```
+
+:::note
+Package được phân phối dưới dạng ESM (`"type": "module"`) và không có side effect (`"sideEffects": false`). Định nghĩa type được giải quyết từ `dist/src/*.d.ts`.
+:::
+
+## Các bước tiếp theo [#next-steps]
+
+Hãy xem phần định nghĩa error class và cách chuyển ngôn ngữ cơ bản trong [Cách dùng](/vi/usage).

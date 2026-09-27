@@ -1,0 +1,49 @@
+---
+title: Instalasi
+description: Cara memasang i18n-error-base dan persyaratan runtime.
+---
+
+## Persyaratan [#requirements]
+
+- Lingkungan runtime yang dapat menangani ES modul, seperti Node.js
+- `valibot@^1.0.0` diperlukan sebagai dependensi peer
+
+`I18nErrorBase` merujuk ke `getGlobalConfig()` Valibot secara internal untuk mendapatkan `lang` saat ini. Bahkan pada proyek yang tidak menggunakan Valibot, cukup memanggil `setGlobalConfig({ lang })` hanya untuk pengalihan bahasa agar dapat berfungsi.
+
+## Instalasi [#installation]
+
+```package-install
+npm i i18n-error-base
+```
+
+Jika Valibot belum dipasang, tambahkan juga.
+
+```package-install
+npm i valibot
+```
+
+:::warning[Perhatian dependensi peer]
+`i18n-error-base` tidak membundel `valibot`. Jika pihak host tidak menyediakan `valibot@^1.0.0`, akan terjadi error resolusi saat impor.
+:::
+
+## Impor [#import]
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
+```
+
+Ekspor default juga disediakan.
+
+```ts
+import I18nErrorBase from "i18n-error-base";
+import setErrorMessage from "i18n-error-base";
+```
+
+:::note
+Paket ini didistribusikan sebagai ESM (`"type": "module"`) dan tidak memiliki efek samping (`"sideEffects": false`). Definisi tipe diselesaikan dari `dist/src/*.d.ts`.
+:::
+
+## Langkah selanjutnya [#next-steps]
+
+Periksa definisi kelas kesalahan dan dasar-dasar pengalihan bahasa di [Penggunaan](/id/usage).

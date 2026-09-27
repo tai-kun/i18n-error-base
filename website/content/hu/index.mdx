@@ -1,0 +1,67 @@
+---
+title: i18n-error-base
+description: Hibaüzeneteket váltó Error alaposztály, amely a Valibot nyelvi beállításával működik együtt.
+---
+
+Alaposztály az `Error` örökléséhez, amely a Valibot globális nyelvi beállításával (`lang`) együttműködve dinamikusan váltja a `message` értékét.
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+setErrorMessage(NotFoundError, ({ resource }) => `リソースが見つかりません: ${resource}`, "ja");
+setErrorMessage(NotFoundError, ({ resource }) => `Resource not found: ${resource}`, "en");
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // リソースが見つかりません: user
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Resource not found: user
+```
+
+Mivel a `message` elérésekor az aktuális `lang` értéket olvassa, a példány újraalkotása nélkül válthat nyelvet. Nem regisztrált nyelv esetén a konstruktornak átadott alapértelmezett üzenetre esik vissza.
+
+## Jellemzők [#features]
+
+- A Valibot `getGlobalConfig()` / `setGlobalConfig({ lang })` beállításaival működik együtt, és dinamikusan oldja fel a `message` értékét
+- A nyelvenkénti üzeneteket utólag regisztrálhatja a `setErrorMessage` segítségével. A `meta` értéket fogadó függvények is regisztrálhatók
+- Nem regisztrált nyelv esetén a konstruktor alapértelmezett üzenetére esik vissza
+- Osztályszintű `static prefix` segítségével előtag fűzhető az üzenet elejére
+- A `meta` értéket a konstruktor tárolja, és átadja az üzenetgeneráló függvényeknek
+- Mivel az `Error` osztályból öröklődik, az `instanceof Error`, a `cause` és a `stack` változatlanul használható
+- Az üzenetek tárolója `WeakMap`, így a feleslegessé vált osztályokat a szemétgyűjtő felszabadítja
+
+## Felépítés [#structure]
+
+<CardGroup cols={2}>
+  <Card title="Telepítés" href="/hu/installation" icon="download">
+    A csomag hozzáadása és a Valibot peer függősége.
+  </Card>
+  <Card title="Használat" href="/hu/usage" icon="book-open">
+    Alapműveletek az osztálydefiníciótól a nyelvváltáson, a prefixen és a tartalék üzeneten át.
+  </Card>
+  <Card title="API-referencia" href="/hu/api" icon="code">
+    Az `I18nErrorBase` és a `setErrorMessage`, valamint a kapcsolódó típusok specifikációja.
+  </Card>
+</CardGroup>
+
+## Működés [#how-it-works]
+
+Az `I18nErrorBase` konstruktora a `message` tulajdonságot getterként definiálja. Minden eléréskor az alábbi sorrendben oldja fel.
+
+1. Lekéri a `lang` értéket a `getGlobalConfig()` segítségével. Ha nincs beállítva, `"en"`
+2. Ha van a `setErrorMessage` segítségével regisztrált (osztály × `lang`) függvény, végrehajtja a `meta` átadásával
+3. Ha nincs, a konstruktornak átadott sztringet vagy függvény eredményét (alapértelmezett üzenet) adja vissza
+4. Ha a `static prefix` be van állítva, az üzenet elejére fűzi
+
+:::tip
+Az alapértelmezett üzenet függvényformája az első eléréskor kerül kiértékelésre, majd gyorsítótárazásra. A regisztrált nyelvek üzenetei minden eléréskor újra generálódnak a `meta` alapján, így a nyelvváltás azonnal érvényesül.
+:::
+
+## Következő lépések [#next-steps]
+
+Kezdje a [telepítéssel](/hu/installation), majd tekintse át a teljes folyamatot a [használat](/hu/usage) oldalon. A típusok és argumentumok részleteit az [API-referenciában](/hu/api) találja.

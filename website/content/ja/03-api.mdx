@@ -3,7 +3,7 @@ title: API リファレンス
 description: I18nErrorBase、setErrorMessage、関連する型の仕様。
 ---
 
-## `I18nErrorBase`
+## `I18nErrorBase` [#i18n-error-base]
 
 `Error` を継承するための基底クラスです。`message` をゲッターとして再定義し、Valibot の `lang` に応じて動的に解決します。
 
@@ -13,19 +13,19 @@ import { I18nErrorBase } from "i18n-error-base";
 class MyError extends I18nErrorBase<{ code: string }> {}
 ```
 
-### 型パラメーター
+### 型パラメーター [#type-params]
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
 | `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | `meta` として保持する付随情報の型。使わない場合は `undefined` を指定します。 |
 
-### 静的プロパティー
+### 静的プロパティー [#static-props]
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
 | `prefix?` | `string` | `undefined` | 設定すると解決後のメッセージ先頭に連結されます。 |
 
-### インスタンスプロパティー
+### インスタンスプロパティー [#instance-props]
 
 | Prop | Type | Description |
 | ---- | ---- | ----------- |
@@ -33,7 +33,7 @@ class MyError extends I18nErrorBase<{ code: string }> {}
 | `message` | `string` | 現在の `lang` に応じて解決されるメッセージ。列挙可能です。 |
 | `cause` | `unknown` | `ErrorOptions` で渡した原因。`Error` の標準プロパティーです。 |
 
-### コンストラクター
+### コンストラクター [#constructor]
 
 `TMeta` が `undefined` を含まない場合、`meta` は必須です。
 
@@ -56,7 +56,7 @@ new MyError(meta, message, options?)
 
 `message` に文字列以外（数値など）を渡した場合は `String(...)` で文字列化されます。メッセージファクトリーが空文字を返した場合は `message` も空文字になります。
 
-### 解決順序
+### 解決順序 [#resolution-order]
 
 1. `getGlobalConfig()` の `lang` を取得します（未設定時は `"en"`）
 2. `setErrorMessage` で登録された当該クラス・当該言語の関数を `meta` 付きで実行します
@@ -67,7 +67,7 @@ new MyError(meta, message, options?)
 登録の照合は `this.constructor` の完全一致です。親クラスへの登録は子クラスに継承されません。必要なクラスごとに登録してください。
 :::
 
-## `setErrorMessage`
+## `setErrorMessage` [#set-error-message]
 
 言語ごとのメッセージ作成関数を登録します。
 
@@ -85,9 +85,9 @@ setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
 
 文字列は内部で関数に変換して保持されます。同じクラス・同じ言語への再登録は上書きです。保存先は `globalThis.i18n_error_base__message_map` の `WeakMap` で、キーはクラス、値は言語から関数への `Map` です。
 
-## 型
+## 型 [#types]
 
-### `ErrorMeta`
+### `ErrorMeta` [#error-meta]
 
 ```ts
 type ErrorMeta = {
@@ -97,7 +97,7 @@ type ErrorMeta = {
 
 `TMeta` の既定の制約です。任意のプロパティーを持つ読み取り専用オブジェクトを表します。
 
-### `ErrorOptions`
+### `ErrorOptions` [#error-options]
 
 ```ts
 type ErrorOptions =
@@ -111,7 +111,7 @@ type ErrorOptions =
 
 実行環境の `Error` コンストラクター第 2 引数から導出した型です。`cause` を含むオプションを渡せます。後者の分岐は古い環境向けのフォールバックです。
 
-### `MessageFactory<TMeta>`
+### `MessageFactory<TMeta>` [#message-factory]
 
 ```ts
 interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
@@ -121,7 +121,7 @@ interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 
 `meta` からメッセージを生成する関数です。コンストラクターの既定メッセージと `setErrorMessage` の登録値の両方で使えます。
 
-### `I18nErrorBaseParams<TMeta>`
+### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
 
 コンストラクター引数のオーバーロードを表す型です。
 
@@ -136,7 +136,7 @@ type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 
 `TMeta` が `undefined` の場合のみ `meta` の省略形が許可されます。
 
-### `I18nErrorBaseConstructor`
+### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
 
 ```ts
 interface I18nErrorBaseConstructor {
@@ -146,7 +146,7 @@ interface I18nErrorBaseConstructor {
 
 `setErrorMessage` の第 1 引数の型です。内部識別用のシンボルにより、`I18nErrorBase` を継承しないクラスの混入を型レベルで防ぎます。
 
-## 補足
+## 補足 [#notes]
 
 - `message` の解決に使う `lang` の既定値は `"en"` です。`setGlobalConfig({ lang })` で明示的に切り替えてください
 - 言語コードの正規化やフォールバックチェーン（例: `en-US` から `en` への退避）はありません。未登録言語は一律で既定メッセージになります

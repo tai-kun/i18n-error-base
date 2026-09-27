@@ -1,0 +1,153 @@
+---
+title: مرجع API
+description: مشخصات I18nErrorBase و setErrorMessage و نوع‌های مرتبط.
+---
+
+## `I18nErrorBase` [#i18n-error-base]
+
+کلاس پایه برای ارث‌بردن از `Error` است. `message` را به‌عنوان getter بازتعریف می‌کند و بر اساس `lang` در Valibot به‌صورت پویا حل می‌کند.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class MyError extends I18nErrorBase<{ code: string }> {}
+```
+
+### پارامترهای نوع [#type-params]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | نوع اطلاعات همراهی که به‌عنوان `meta` نگه داشته می‌شود. اگر استفاده نمی‌کنید `undefined` مشخص کنید. |
+
+### خصوصیت‌های استاتیک [#static-props]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `prefix?` | `string` | `undefined` | اگر تنظیم شود به ابتدای پیام حل‌شده چسبانده می‌شود. |
+
+### خصوصیت‌های نمونه [#instance-props]
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `meta` | `TMeta` | اطلاعات همراهی سپرده‌شده به سازنده. خواندنی و نوشتنی است. |
+| `message` | `string` | پیامی که بر اساس `lang` جاری حل می‌شود. قابل‌شمارش است. |
+| `cause` | `unknown` | علتی که با `ErrorOptions` سپرده شده. خصوصیت استاندارد `Error` است. |
+
+### سازنده [#constructor]
+
+وقتی `TMeta` شامل `undefined` نباشد، `meta` الزامی است.
+
+```ts
+new MyError(meta, message, options?)
+```
+
+وقتی `TMeta` برابر `undefined` باشد، می‌توان `meta` را حذف کرد.
+
+```ts
+new MyError(message, options?)
+new MyError(meta, message, options?)
+```
+
+| پارامتر | نوع | توضیح |
+| ------------ | -- | ---- |
+| `meta` | `TMeta` | اطلاعات همراهی که در ساخت پیام استفاده می‌شود. |
+| `message` | `string \| MessageFactory<TMeta>` | پیام پیش‌فرضی که برای زبان‌های ثبت‌نشده استفاده می‌شود. اگر تابع باشد `meta` را دریافت می‌کند. |
+| `options` | `ErrorOptions` | گزینه‌های سازگار با آرگومان دوم `Error` (مثل `{ cause }`). |
+
+اگر به `message` چیزی غیر از رشته (مثل عدد) بسپارید با `String(...)` به رشته تبدیل می‌شود. اگر کارخانهٔ پیام رشتهٔ تهی برگرداند، `message` هم رشتهٔ تهی می‌شود.
+
+### ترتیب حل [#resolution-order]
+
+1. `lang` را از `getGlobalConfig()` می‌گیرد (اگر تنظیم نشده باشد `"en"`)
+2. تابع ثبت‌شده با `setErrorMessage` برای آن کلاس و آن زبان را با `meta` اجرا می‌کند
+3. اگر ثبت نشده باشد، از پیام پیش‌فرض سازنده استفاده می‌کند (رشته یا نتیجهٔ ارزیابی تابع. پس از نخستین ارزیابی کش می‌شود)
+4. اگر `static prefix` وجود داشته باشد به ابتدا می‌چسباند
+
+:::note
+تطبیق ثبت با تطابق کامل `this.constructor` است. ثبت روی کلاس والد به کلاس‌های فرزند به ارث نمی‌رسد. برای هر کلاس لازم جداگانه ثبت کنید.
+:::
+
+## `setErrorMessage` [#set-error-message]
+
+تابع سازندهٔ پیام هر زبان را ثبت می‌کند.
+
+```ts
+import { setErrorMessage } from "i18n-error-base";
+
+setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
+```
+
+| پارامتر | نوع | توضیح |
+| ------------ | -- | ---- |
+| `reference` | `I18nErrorBaseConstructor` | کلاسی که از `I18nErrorBase` ارث برده. کلاس‌های به‌ارث‌نبرده خطای نوع می‌شوند. |
+| `message` | `string \| (meta) => string` | پیامی که ثبت می‌شود. نوع `meta` از `meta` کلاس هدف استنباط می‌شود. |
+| `lang` | `string \| Iterable<string>` | زبان هدف. یک کد تنها یا شیء تکرارپذیر کدها (مثل آرایه). |
+
+رشته‌ها در داخل به تابع تبدیل و نگه داشته می‌شوند. ثبت دوباره روی همان کلاس و همان زبان بازنویسی است. محل ذخیره `WeakMap` روی `globalThis.i18n_error_base__message_map` است، که کلید آن کلاس و مقدار آن `Map` از زبان به تابع است.
+
+## نوع‌ها [#types]
+
+### `ErrorMeta` [#error-meta]
+
+```ts
+type ErrorMeta = {
+  readonly [prop: string]: unknown;
+};
+```
+
+قید پیش‌فرض `TMeta` است. شیء فقط‌خواندنی با خصوصیت‌های دلخواه را نشان می‌دهد.
+
+### `ErrorOptions` [#error-options]
+
+```ts
+type ErrorOptions =
+  ConstructorParameters<typeof Error> extends [
+    message?: unknown,
+    options?: (infer TOptions) | undefined,
+  ]
+    ? TOptions
+    : { readonly cause?: unknown };
+```
+
+نوعی برگرفته از آرگومان دوم سازندهٔ `Error` در محیط اجرایی است. می‌توان گزینه‌های شامل `cause` را سپرد. شاخهٔ دوم fallback برای محیط‌های قدیمی است.
+
+### `MessageFactory<TMeta>` [#message-factory]
+
+```ts
+interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
+  (meta: TMeta): string;
+}
+```
+
+تابعی است که از `meta` پیام می‌سازد. هم برای پیام پیش‌فرض سازنده و هم برای مقادیر ثبت‌شده با `setErrorMessage` به کار می‌رود.
+
+### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
+
+نوعی که overloadهای آرگومان سازنده را نشان می‌دهد.
+
+```ts
+type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
+  [TMeta] extends [undefined]
+    ?
+        | [message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+        | [meta: undefined, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+    : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
+```
+
+شکل خلاصه‌شدهٔ بدون `meta` فقط وقتی مجاز است که `TMeta` برابر `undefined` باشد.
+
+### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
+
+```ts
+interface I18nErrorBaseConstructor {
+  new (...args: any): I18nErrorBase;
+}
+```
+
+نوع آرگومان اول `setErrorMessage` است. با سمبل شناسایی داخلی، در سطح نوع جلوی راه‌یابی کلاس‌هایی را می‌گیرد که از `I18nErrorBase` ارث نبرده‌اند.
+
+## یادداشت‌ها [#notes]
+
+- مقدار پیش‌فرض `lang` که در حل `message` استفاده می‌شود `"en"` است. صریح با `setGlobalConfig({ lang })` جابه‌جا کنید
+- نرمال‌سازی کدهای زبان یا زنجیرهٔ fallback (مثل عقب‌نشینی از `en-US` به `en`) وجود ندارد. زبان‌های ثبت‌نشده یکسره پیام پیش‌فرض می‌شوند
+- داده‌های ثبت در `WeakMap` سراسری فرایند نگه داشته می‌شوند. اگر می‌خواهید در تست‌ها ایزوله کنید، می‌توانید با `globalThis.i18n_error_base__message_map = undefined` آن را دور بریزید

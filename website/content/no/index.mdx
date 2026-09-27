@@ -1,0 +1,67 @@
+---
+title: i18n-error-base
+description: En Error-baseklasse som bytter feilmeldinger i takt med Valibots språkinnstilling.
+---
+
+En baseklasse for å arve fra `Error`, som dynamisk bytter `message` i takt med Valibots globale språkinnstilling (`lang`).
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+setErrorMessage(NotFoundError, ({ resource }) => `リソースが見つかりません: ${resource}`, "ja");
+setErrorMessage(NotFoundError, ({ resource }) => `Resource not found: ${resource}`, "en");
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // リソースが見つかりません: user
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Resource not found: user
+```
+
+Siden gjeldende `lang` slås opp hver gang `message` aksesseres, kan du bytte språk uten å gjenskape instanser. For språk uten registrering falles det tilbake på standardmeldingen fra konstruktøren.
+
+## Funksjoner [#features]
+
+- Løser `message` dynamisk i takt med Valibots `getGlobalConfig()` / `setGlobalConfig({ lang })`
+- Registrer språkspesifikke meldinger i etterkant med `setErrorMessage`. Du kan også registrere funksjoner som mottar `meta`
+- Faller tilbake på konstruktørens standardmelding for språk uten registrering
+- Kan legge til et prefiks foran meldingen via klassens `static prefix`
+- Beholder `meta` fra konstruktøren og sender den til meldingsfunksjoner
+- Arver fra `Error`, så `instanceof Error`, `cause` og `stack` fungerer som vanlig
+- Lagrer meldinger i et `WeakMap`, slik at ubrukte klasser kan garbage collectes
+
+## Struktur [#structure]
+
+<CardGroup cols={2}>
+  <Card title="Installasjon" href="/no/installation" icon="download">
+    Om å legge til pakken og peer-avhengigheten til Valibot.
+  </Card>
+  <Card title="Bruk" href="/no/usage" icon="book-open">
+    Grunnleggende operasjoner fra klassedefinisjon til språkbytte, prefiks og fallback.
+  </Card>
+  <Card title="API-referanse" href="/no/api" icon="code">
+    Spesifikasjoner for `I18nErrorBase` og `setErrorMessage` samt relaterte typer.
+  </Card>
+</CardGroup>
+
+## Slik fungerer det [#how-it-works]
+
+Konstruktøren til `I18nErrorBase` definerer `message` som en getter. Den løses i følgende rekkefølge ved hver aksess.
+
+1. Henter `lang` fra `getGlobalConfig()`. Den er `"en"` når den ikke er satt
+2. Hvis det finnes en `(klasse × lang)`-funksjon registrert med `setErrorMessage`, kjøres den med `meta`
+3. Ellers returneres standardmeldingen fra konstruktøren (en streng eller resultatet av en funksjon)
+4. Hvis `static prefix` er satt, legges det til foran
+
+:::tip
+Funksjonsformen av standardmeldingen evalueres ved første aksess og bufres deretter. Meldinger for registrerte språk regenereres fra `meta` ved hver aksess, så språkbytter slår inn umiddelbart.
+:::
+
+## Neste trinn [#next-steps]
+
+Start med [Installasjon](/no/installation), og gå deretter gjennom hele flyten i [Bruk](/no/usage). Typer og argumenter er beskrevet i [API-referansen](/no/api).

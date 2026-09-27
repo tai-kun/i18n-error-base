@@ -1,0 +1,182 @@
+---
+title: Használat
+description: Hibaosztályok definiálása, üzenetregisztráció, nyelvváltás, prefix és tartalék üzenet alapműveletei.
+---
+
+## Alapfolyamat [#basic-flow]
+
+<Steps>
+  <Step title="Hibaosztály definiálása">
+    Öröklődjön az `I18nErrorBase<TMeta>` osztályból, és definiálja `TMeta` típusként az üzenetgeneráláshoz használandó adatokat.
+  </Step>
+  <Step title="Nyelvenkénti üzenetek regisztrálása">
+    Regisztrálja az osztályhoz és nyelvhez tartozó üzeneteket a `setErrorMessage` segítségével.
+  </Step>
+  <Step title="Nyelvváltás és a message olvasása">
+    Váltson nyelvet a Valibot `setGlobalConfig({ lang })` függvényével, majd férjen hozzá az `error.message` értékéhez.
+  </Step>
+</Steps>
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`);
+  }
+}
+
+setErrorMessage(
+  BusinessRuleError,
+  ({ code, limit }) => `コード: ${code}、制限: ${limit}`,
+  "ja",
+);
+
+const error = new BusinessRuleError({ code: "ERR", limit: 50 });
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // コード: ERR、制限: 50
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Code: ERR, Limit: 50
+```
+
+## Hibaosztály definiálása [#define-error-class]
+
+A `TMeta` az üzenetgeneráláshoz használt kiegészítő adatok típusa. `error.meta` néven tárolódik, és a `setErrorMessage` függvényeinek is átadódik.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+console.log(error.meta); // { resource: "user" }
+```
+
+A konstruktor második argumentuma sztring vagy `(meta) => string` függvény. Harmadik argumentumként az `Error` osztályhoz hasonlóan `{ cause }` jellegű opciók adhatók át.
+
+```ts
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+const cause = new Error("original");
+const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
+console.log(error.cause === cause); // true
+```
+
+Ha a `TMeta` értéke `undefined`, a `meta` elhagyható.
+
+```ts
+class NoMetaError extends I18nErrorBase<undefined> {}
+
+const a = new NoMetaError("no meta");
+const b = new NoMetaError(undefined, "no meta");
+console.log(a.meta); // undefined
+```
+
+:::note
+Az `I18nErrorBase` közvetlen `new` operátorral való példányosítása nem rendeltetésszerű. Mindig örökléssel hozzon létre konkrét osztályt. Mivel az üzenetek regisztrációja konstruktorszinten (`this.constructor`) különül el, a szülőosztályhoz regisztrált üzenetek nem öröklődnek a gyermekosztályokra.
+:::
+
+## Üzenet regisztrálása [#register-message]
+
+A `setErrorMessage` egy osztályhoz és nyelvhez tartozó üzenetkészítő függvényt regisztrál.
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
+setErrorMessage(TestError, "something went wrong", "en");
+```
+
+A sztring belsőleg `() => text` formára alakul. A nyelv sztringek tömbjeként is megadható.
+
+```ts
+const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
+setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
+```
+
+Azonos osztály és nyelv újbóli regisztrálása felülírja a korábbit. A regisztráció az `instanceof` ellenőrzéstől függetlenül csak akkor érvényes, ha a regisztrációkori és a hivatkozáskori konstruktor azonos.
+
+:::warning[Figyelem a regisztráció előtti elérésre]
+Az alapértelmezett üzenet függvényformája az első eléréskor kerül kiértékelésre és gyorsítótárazásra. Ha a `message` értéket nem regisztrált nyelven olvassa a `setErrorMessage` előtt, az alapértelmezett érték rögzül. A nyelvenkénti üzeneteket főszabályként a példány létrehozása előtt regisztrálja.
+:::
+
+## Nyelvváltás [#switch-language]
+
+A nyelv a Valibot globális beállításával váltható. A `message` minden eléréskor az aktuális `lang` értékre hivatkozik.
+
+```ts
+import { setGlobalConfig } from "valibot";
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // 日本語の登録メッセージ
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
+```
+
+A `lang` alapértelmezett értéke beállítás hiányában `"en"`. Nem regisztrált nyelv kérése esetén a konstruktornak átadott alapértelmezett üzenetre esik vissza.
+
+```ts
+setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
+
+setGlobalConfig({ lang: "fr" });
+console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
+```
+
+## Előtag hozzáadása [#prefix]
+
+Ha az osztályban beállítja a `static prefix` tulajdonságot, az a feloldott üzenet elejére fűződik. A lefordított és az alapértelmezett üzenetekre egyaránt vonatkozik.
+
+```ts
+class PrefixedError extends I18nErrorBase<{ code: string }> {
+  static {
+    this.prefix = "[ERROR] ";
+  }
+}
+
+setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // "[ERROR] code is ERR"
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // "[ERROR] fallback"
+```
+
+Beállítás hiányában előtag nélkül, változatlanul tér vissza.
+
+## Viselkedés Error típusként [#error-behavior]
+
+- Az `error instanceof Error`, az `instanceof I18nErrorBase` és az `instanceof` konkrét osztály ellenőrzés mindegyike `true`
+- A `message` felsorolható (szerepel az `Object.keys(error)` eredményében)
+- A `String(error)` / `error.toString()` tartalmazza a feloldott üzenetet (pl. `"Error: ..."`)
+- A `cause` értéke a `new TestError(meta, message, { cause })` hívással tárolódik. Régebbi futtatókörnyezetekhez készült polyfillként, ha a `cause` nem támogatott, az `options.cause` értékadó kezelése szerepel
+
+## Gyakori minták [#common-patterns]
+
+### Az alapértelmezett üzenet rögzítése a konstruktorban [#fix-default-message-in-constructor]
+
+```ts
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }, options?: ErrorOptions) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`, options);
+  }
+}
+```
+
+A hívó oldalnak csak a `meta` értékkel kell foglalkoznia, így elkerülhető az alapértelmezett szöveg (itt angol) ismétlése.
+
+### Több nyelv együttes regisztrálása [#register-multiple-languages]
+
+```ts
+setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
+setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
+```
+
+A nyelvkódok normalizálása nem történik meg. Az `"en"` és az `"en-US"` külön kulcsként kezelődik, ezért a szükséges kódokat explicit módon regisztrálja.

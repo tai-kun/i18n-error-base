@@ -1,0 +1,182 @@
+---
+title: Χρήση
+description: Βασικές λειτουργίες ορισμού κλάσεων σφαλμάτων, καταχώρησης μηνυμάτων, εναλλαγής γλωσσών, προθεμάτων και εναλλακτικής χρήσης.
+---
+
+## Βασική ροή [#basic-flow]
+
+<Steps>
+  <Step title="Ορίστε την κλάση σφάλματος">
+    Επεκτείνετε το `I18nErrorBase<TMeta>` και ορίστε ως `TMeta` τις πληροφορίες που θέλετε να χρησιμοποιήσετε για τη δημιουργία μηνυμάτων.
+  </Step>
+  <Step title="Καταχωρίστε μηνύματα ανά γλώσσα">
+    Καταχωρίστε με το `setErrorMessage` το μήνυμα που αντιστοιχεί στην κλάση και τη γλώσσα.
+  </Step>
+  <Step title="Αλλάξτε γλώσσα και διαβάστε το message">
+    Αλλάξτε γλώσσα με το `setGlobalConfig({ lang })` του Valibot και προσπελάστε το `error.message`.
+  </Step>
+</Steps>
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`);
+  }
+}
+
+setErrorMessage(
+  BusinessRuleError,
+  ({ code, limit }) => `コード: ${code}、制限: ${limit}`,
+  "ja",
+);
+
+const error = new BusinessRuleError({ code: "ERR", limit: 50 });
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // コード: ERR、制限: 50
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Code: ERR, Limit: 50
+```
+
+## Ορισμός κλάσης σφάλματος [#define-error-class]
+
+Το `TMeta` είναι ο τύπος των συνοδευτικών πληροφοριών που χρησιμοποιούνται για τη δημιουργία μηνυμάτων. Διατηρείται ως `error.meta` και διαβιβάζεται επίσης στη συνάρτηση του `setErrorMessage`.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+console.log(error.meta); // { resource: "user" }
+```
+
+Το 2ο όρισμα του κατασκευαστή είναι συμβολοσειρά ή συνάρτηση `(meta) => string`. Ως 3ο όρισμα μπορείτε να δώσετε επιλογές όπως `{ cause }`, όπως στο `Error`.
+
+```ts
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+const cause = new Error("original");
+const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
+console.log(error.cause === cause); // true
+```
+
+Αν το `TMeta` είναι `undefined`, μπορείτε να παραλείψετε το `meta`.
+
+```ts
+class NoMetaError extends I18nErrorBase<undefined> {}
+
+const a = new NoMetaError("no meta");
+const b = new NoMetaError(undefined, "no meta");
+console.log(a.meta); // undefined
+```
+
+:::note
+Δεν προορίζεται η απευθείας δημιουργία του `I18nErrorBase` με `new`. Να δημιουργείτε πάντα μια συγκεκριμένη κλάση που το επεκτείνει. Ο προορισμός καταχώρησης μηνυμάτων διακρίνεται ανά κατασκευαστή (`this.constructor`), οπότε ένα μήνυμα που καταχωρήθηκε στη γονική κλάση δεν κληρονομείται από τη θυγατρική κλάση.
+:::
+
+## Καταχώρηση μηνυμάτων [#register-message]
+
+Το `setErrorMessage` καταχωρεί μια συνάρτηση δημιουργίας μηνύματος για μια κλάση και μια γλώσσα.
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
+setErrorMessage(TestError, "something went wrong", "en");
+```
+
+Αν δώσετε συμβολοσειρά, μετατρέπεται εσωτερικά σε `() => text`. Η γλώσσα μπορεί επίσης να δοθεί ως πίνακας συμβολοσειρών.
+
+```ts
+const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
+setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
+```
+
+Η εκ νέου καταχώρηση για την ίδια κλάση και γλώσσα αντικαθιστά την προηγούμενη. Το περιεχόμενο καταχώρησης χρησιμοποιείται μόνο όταν ο κατασκευαστής κατά την καταχώρηση και κατά την αναφορά είναι πανομοιότυπος, ανεξάρτητα από τον έλεγχο `instanceof`.
+
+:::warning[Προσοχή στην πρόσβαση πριν από την καταχώρηση]
+Η μορφή συνάρτησης του προεπιλεγμένου μηνύματος αξιολογείται και αποθηκεύεται προσωρινά κατά την πρώτη πρόσβαση. Αν διαβάσετε το `message` σε μη καταχωρημένη γλώσσα πριν από το `setErrorMessage`, αυτή η προεπιλεγμένη τιμή παγιώνεται. Καταχωρείτε κατά κανόνα τα μηνύματα ανά γλώσσα πριν από τη δημιουργία στιγμιότυπων.
+:::
+
+## Εναλλαγή γλώσσας [#switch-language]
+
+Η γλώσσα αλλάζει με την καθολική ρύθμιση του Valibot. Το `message` αναφέρεται στην τρέχουσα `lang` σε κάθε πρόσβαση.
+
+```ts
+import { setGlobalConfig } from "valibot";
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // 日本語の登録メッセージ
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
+```
+
+Η προεπιλογή όταν η `lang` δεν έχει οριστεί είναι `"en"`. Αν ζητηθεί γλώσσα χωρίς καταχώρηση, χρησιμοποιείται το προεπιλεγμένο μήνυμα που δόθηκε στον κατασκευαστή.
+
+```ts
+setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
+
+setGlobalConfig({ lang: "fr" });
+console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
+```
+
+## Προσθήκη προθέματος [#prefix]
+
+Αν ορίσετε `static prefix` στην κλάση, συνδέεται στην αρχή του επιλυμένου μηνύματος. Εφαρμόζεται τόσο στα μεταφρασμένα μηνύματα όσο και στα προεπιλεγμένα μηνύματα.
+
+```ts
+class PrefixedError extends I18nErrorBase<{ code: string }> {
+  static {
+    this.prefix = "[ERROR] ";
+  }
+}
+
+setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // "[ERROR] code is ERR"
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // "[ERROR] fallback"
+```
+
+Αν δεν οριστεί, επιστρέφεται ως έχει χωρίς πρόθεμα.
+
+## Συμπεριφορά ως Error [#error-behavior]
+
+- Τα `error instanceof Error`, `instanceof I18nErrorBase` και `instanceof <συγκεκριμένη κλάση>` είναι όλα `true`
+- Το `message` είναι απαριθμήσιμο (περιλαμβάνεται στο `Object.keys(error)`)
+- Τα `String(error)` / `error.toString()` περιλαμβάνουν το επιλυμένο μήνυμα (π.χ.: `"Error: ..."`)
+- Το `cause` διατηρείται με `new TestError(meta, message, { cause })`. Ως polyfill για παλαιότερα περιβάλλοντα εκτέλεσης, περιλαμβάνεται επεξεργασία που εκχωρεί το `options.cause` όταν το `cause` δεν υποστηρίζεται
+
+## Συνήθη μοτίβα [#common-patterns]
+
+### Καθορισμός του προεπιλεγμένου μηνύματος στον κατασκευαστή [#fix-default-message-in-constructor]
+
+```ts
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }, options?: ErrorOptions) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`, options);
+  }
+}
+```
+
+Η πλευρά κλήσης χρειάζεται να γνωρίζει μόνο το `meta`, αποφεύγοντας την επανάληψη του προεπιλεγμένου κειμένου (εδώ στα αγγλικά).
+
+### Ομαδική καταχώρηση πολλών γλωσσών [#register-multiple-languages]
+
+```ts
+setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
+setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
+```
+
+Δεν γίνεται κανονικοποίηση των κωδικών γλώσσας. Τα `"en"` και `"en-US"` αντιμετωπίζονται ως διαφορετικά κλειδιά, οπότε καταχωρίστε ρητά τους κωδικούς που χρειάζεστε.

@@ -1,0 +1,182 @@
+---
+title: Brug
+description: Grundlæggende arbejdsgang for at definere fejlklasser, registrere meddelelser, skifte sprog, præfiks og fallback.
+---
+
+## Grundforløb [#basic-flow]
+
+<Steps>
+  <Step title="Definér en fejlklasse">
+    Nedarv `I18nErrorBase<TMeta>`, og definér de oplysninger, du vil bruge til meddelelsesgenerering, som `TMeta`.
+  </Step>
+  <Step title="Registrer sprogspecifikke meddelelser">
+    Registrer meddelelsen for hver klasse og hvert sprog med `setErrorMessage`.
+  </Step>
+  <Step title="Skift sprog og læs message">
+    Skift med Valibots `setGlobalConfig({ lang })`, og tilgå `error.message`.
+  </Step>
+</Steps>
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`);
+  }
+}
+
+setErrorMessage(
+  BusinessRuleError,
+  ({ code, limit }) => `コード: ${code}、制限: ${limit}`,
+  "ja",
+);
+
+const error = new BusinessRuleError({ code: "ERR", limit: 50 });
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // コード: ERR、制限: 50
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Code: ERR, Limit: 50
+```
+
+## Definér en fejlklasse [#define-error-class]
+
+`TMeta` er typen for de supplerende oplysninger, der bruges til meddelelsesgenerering. Den beholdes som `error.meta` og sendes også til funktionen i `setErrorMessage`.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+console.log(error.meta); // { resource: "user" }
+```
+
+Konstruktørens andet argument er en streng eller en `(meta) => string`-funktion. Som tredje argument kan du sende de samme indstillinger som til `Error`, f.eks. `{ cause }`.
+
+```ts
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+const cause = new Error("original");
+const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
+console.log(error.cause === cause); // true
+```
+
+Hvis du sætter `TMeta` til `undefined`, kan du udelade `meta`.
+
+```ts
+class NoMetaError extends I18nErrorBase<undefined> {}
+
+const a = new NoMetaError("no meta");
+const b = new NoMetaError(undefined, "no meta");
+console.log(a.meta); // undefined
+```
+
+:::note
+`I18nErrorBase` er ikke beregnet til at blive konstrueret direkte med `new`. Opret og brug altid en konkret underklasse. Meddelelsesregistreringer skelnes pr. konstruktør (`this.constructor`), så en meddelelse registreret på en forældreklasse nedarves aldrig af en underklasse.
+:::
+
+## Registrer meddelelser [#register-message]
+
+`setErrorMessage` registrerer en meddelelsesfunktion for en klasse og et sprog.
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
+setErrorMessage(TestError, "something went wrong", "en");
+```
+
+En streng konverteres internt til `() => text`. Sprog kan også angives som en strengmatrix.
+
+```ts
+const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
+setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
+```
+
+Genregistrering af samme klasse og sprog overskriver den tidligere post. Registreringen bruges kun, når konstruktøren ved registrering og ved opslag er identisk, uanset `instanceof`-kontroller.
+
+:::warning[Pas på adgang før registrering]
+Funktionsformen af standardmeddelelsen evalueres og caches ved første adgang. Hvis du læser `message` på et uregistreret sprog, før du kalder `setErrorMessage`, fastlåses denne standardværdi. Registrer som hovedregel sprogspecifikke meddelelser, før du opretter instanser.
+:::
+
+## Skift sprog [#switch-language]
+
+Sprog skiftes med Valibots globale indstilling. `message` slår den aktuelle `lang` op ved hver adgang.
+
+```ts
+import { setGlobalConfig } from "valibot";
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // 日本語の登録メッセージ
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
+```
+
+Standarden, når `lang` ikke er angivet, er `"en"`. Hvis det ønskede sprog ikke er registreret, falder den tilbage til standardmeddelelsen fra konstruktøren.
+
+```ts
+setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
+
+setGlobalConfig({ lang: "fr" });
+console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
+```
+
+## Tilføj et præfiks [#prefix]
+
+Hvis du sætter `static prefix` på en klasse, sættes det foran den løste meddelelse. Det gælder både oversatte meddelelser og standardmeddelelser.
+
+```ts
+class PrefixedError extends I18nErrorBase<{ code: string }> {
+  static {
+    this.prefix = "[ERROR] ";
+  }
+}
+
+setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // "[ERROR] code is ERR"
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // "[ERROR] fallback"
+```
+
+Når det ikke er angivet, returneres meddelelsen uændret uden præfiks.
+
+## Opførsel som Error [#error-behavior]
+
+- `error instanceof Error`, `instanceof I18nErrorBase` og `instanceof <konkret klasse>` er alle `true`
+- `message` kan optælles (den er inkluderet i `Object.keys(error)`)
+- `String(error)` / `error.toString()` indeholder den løste meddelelse (f.eks. `"Error: ..."`)
+- `cause` beholdes via `new TestError(meta, message, { cause })`. Som polyfill til ældre kørselsmiljøer er der indbygget håndtering, der tildeler `options.cause`, når `cause` ikke understøttes
+
+## Almindelige mønstre [#common-patterns]
+
+### Fastlås standardmeddelelsen i konstruktøren [#fix-default-message-in-constructor]
+
+```ts
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }, options?: ErrorOptions) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`, options);
+  }
+}
+```
+
+Kalderen skal kun tænke på `meta`, så dublering af standardteksten (her engelsk) undgås.
+
+### Registrer flere sprog på én gang [#register-multiple-languages]
+
+```ts
+setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
+setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
+```
+
+Sprogkoder normaliseres ikke. `"en"` og `"en-US"` behandles som separate nøgler, så registrer eksplicit alle de koder, du har brug for.

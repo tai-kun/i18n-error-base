@@ -1,0 +1,153 @@
+---
+title: مرجع API
+description: مواصفات I18nErrorBase وsetErrorMessage والأنواع المرتبطة.
+---
+
+## `I18nErrorBase` [#i18n-error-base]
+
+فئة أساسية لوراثة `Error`. تُعيد تعريف `message` كدالة وصول (getter) وتحلّها ديناميكيًا وفقًا لـ`lang` في Valibot.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class MyError extends I18nErrorBase<{ code: string }> {}
+```
+
+### معلمات النوع [#type-params]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | نوع المعلومات الإضافية المحفوظة على أنها `meta`. حدِّد `undefined` عند عدم استخدامها. |
+
+### الخصائص الثابتة [#static-props]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `prefix?` | `string` | `undefined` | عند ضبطها تُوصَل في بداية الرسالة المحلولة. |
+
+### خصائص النسخة [#instance-props]
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `meta` | `TMeta` | المعلومات الإضافية المُمرَّرة إلى المُنشئ. قابلة للقراءة والكتابة. |
+| `message` | `string` | الرسالة المحلولة وفقًا لـ`lang` الحالية. قابلة للتعداد. |
+| `cause` | `unknown` | السبب المُمرَّر عبر `ErrorOptions`. خاصية قياسية في `Error`. |
+
+### المُنشئ [#constructor]
+
+عندما لا يتضمن `TMeta` القيمة `undefined`، تكون `meta` مطلوبة.
+
+```ts
+new MyError(meta, message, options?)
+```
+
+عندما يكون `TMeta` مساويًا لـ`undefined`، يمكن حذف `meta`.
+
+```ts
+new MyError(message, options?)
+new MyError(meta, message, options?)
+```
+
+| المعلمة | النوع | الوصف |
+| ------------ | -- | ---- |
+| `meta` | `TMeta` | المعلومات الإضافية المستخدمة في إنشاء الرسالة. |
+| `message` | `string \| MessageFactory<TMeta>` | الرسالة الافتراضية المستخدمة للغات غير المسجلة. وعندما تكون دالة تستقبل `meta`. |
+| `options` | `ErrorOptions` | خيارات متوافقة مع الوسيط الثاني لـ`Error` (مثل `{ cause }`). |
+
+عند تمرير قيمة غير نصية (مثل رقم) إلى `message` تُحوَّل إلى سلسلة نصية عبر `String(...)`. وعندما تُرجِع دالة إنشاء الرسالة سلسلة فارغة، تكون `message` أيضًا سلسلة فارغة.
+
+### ترتيب الحل [#resolution-order]
+
+1. الحصول على `lang` من `getGlobalConfig()` (تكون `"en"` عند عدم الضبط)
+2. تنفيذ الدالة المسجلة عبر `setErrorMessage` لتلك الفئة وتلك اللغة مع تمرير `meta`
+3. عند عدم التسجيل، تُستخدَم الرسالة الافتراضية للمُنشئ (سلسلة نصية أو نتيجة تقييم الدالة. تُخزَّن مؤقتًا بعد أول تقييم)
+4. إذا وُجد `static prefix` يُوصَل في البداية
+
+:::note
+تُطابَق التسجيلات بالمطابقة التامة على `this.constructor`. فالتسجيل على الفئة الأب لا يُورَّث إلى الفئات الابنة. سجِّل كل فئة مطلوبة.
+:::
+
+## `setErrorMessage` [#set-error-message]
+
+تُسجِّل دالة إنشاء الرسالة لكل لغة.
+
+```ts
+import { setErrorMessage } from "i18n-error-base";
+
+setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
+```
+
+| المعلمة | النوع | الوصف |
+| ------------ | -- | ---- |
+| `reference` | `I18nErrorBaseConstructor` | فئة وارثة لـ`I18nErrorBase`. الفئات غير الوارثة تُعَدّ خطأً نوعيًا. |
+| `message` | `string \| (meta) => string` | الرسالة المطلوب تسجيلها. يُستدَلّ نوع `meta` من `meta` الخاصة بالفئة المستهدفة. |
+| `lang` | `string \| Iterable<string>` | اللغة المستهدفة. رمز واحد أو كائن قابل للتكرار من الرموز (مثل مصفوفة). |
+
+تُحوَّل السلاسل النصية داخليًا إلى دوال قبل حفظها. وتؤدي إعادة التسجيل لنفس الفئة ونفس اللغة إلى الكتابة فوق القيمة السابقة. تُحفَظ البيانات في `WeakMap` على `globalThis.i18n_error_base__message_map`، حيث المفتاح هو الفئة والقيمة خريطة (`Map`) من اللغة إلى الدالة.
+
+## الأنواع [#types]
+
+### `ErrorMeta` [#error-meta]
+
+```ts
+type ErrorMeta = {
+  readonly [prop: string]: unknown;
+};
+```
+
+القيد الافتراضي لـ`TMeta`. يمثل كائنًا للقراءة فقط ذا خصائص اعتباطية.
+
+### `ErrorOptions` [#error-options]
+
+```ts
+type ErrorOptions =
+  ConstructorParameters<typeof Error> extends [
+    message?: unknown,
+    options?: (infer TOptions) | undefined,
+  ]
+    ? TOptions
+    : { readonly cause?: unknown };
+```
+
+نوع مشتق من الوسيط الثاني لمُنشئ `Error` في بيئة التنفيذ. يمكن تمرير خيارات تتضمن `cause`. أما الفرع الأخير فهو بديل احتياطي للبيئات القديمة.
+
+### `MessageFactory<TMeta>` [#message-factory]
+
+```ts
+interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
+  (meta: TMeta): string;
+}
+```
+
+دالة تُنشئ الرسالة من `meta`. تُستخدَم لكل من الرسالة الافتراضية للمُنشئ والقيم المسجلة عبر `setErrorMessage`.
+
+### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
+
+نوع يمثل التحميلات الزائدة (overloads) لوسائط المُنشئ.
+
+```ts
+type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
+  [TMeta] extends [undefined]
+    ?
+        | [message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+        | [meta: undefined, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+    : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
+```
+
+يُسمَح بالصيغة المختصرة بدون `meta` فقط عندما يكون `TMeta` مساويًا لـ`undefined`.
+
+### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
+
+```ts
+interface I18nErrorBaseConstructor {
+  new (...args: any): I18nErrorBase;
+}
+```
+
+نوع الوسيط الأول لـ`setErrorMessage`. يمنع رمز التعريف الداخلي على مستوى النوع تسرب الفئات غير الوارثة لـ`I18nErrorBase`.
+
+## ملاحظات [#notes]
+
+- القيمة الافتراضية لـ`lang` المستخدمة في حلّ `message` هي `"en"`. بدِّلها صراحة عبر `setGlobalConfig({ lang })`
+- لا توجد تسوية لرموز اللغة ولا سلسلة تراجع (مثل التراجع من `en-US` إلى `en`). فاللغات غير المسجلة تُعطي الرسالة الافتراضية دائمًا
+- تُحفَظ بيانات التسجيل في `WeakMap` على مستوى العملية. ولعزل الاختبارات، يمكن التخلص منها عبر `globalThis.i18n_error_base__message_map = undefined`

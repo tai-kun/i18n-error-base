@@ -1,0 +1,67 @@
+---
+title: i18n-error-base
+description: Valibot'un dil ayarıyla senkronize olarak hata mesajlarını değiştiren temel Error sınıfı.
+---
+
+Valibot'un genel dil ayarıyla (`lang`) senkronize olarak `message` değerini dinamik şekilde değiştiren, `Error` genişletmek için kullanılan bir temel sınıftır.
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+setErrorMessage(NotFoundError, ({ resource }) => `リソースが見つかりません: ${resource}`, "ja");
+setErrorMessage(NotFoundError, ({ resource }) => `Resource not found: ${resource}`, "en");
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // リソースが見つかりません: user
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Resource not found: user
+```
+
+`message` değerine her erişimde o anki `lang` değerine bakıldığı için, örnekleri yeniden oluşturmadan dili değiştirebilirsiniz. Kayıtlı mesajı olmayan dillerde, oluşturucuya verilen varsayılan mesaja geri dönülür.
+
+## Özellikler [#features]
+
+- Valibot'un `getGlobalConfig()` / `setGlobalConfig({ lang })` işlevleriyle senkronize olur ve `message` değerini dinamik olarak çözer
+- Dile özgü mesajlar sonradan `setErrorMessage` ile kaydedilir. `meta` alan işlevler de kaydedilebilir
+- Kayıtlı mesajı olmayan dillerde oluşturucunun varsayılan mesajına geri dönülür
+- Sınıf düzeyinde `static prefix` ile mesajın başına önek eklenebilir
+- `meta` oluşturucuda saklanır ve mesaj üretim işlevlerine aktarılır
+- `Error` sınıfından türediği için `instanceof Error`, `cause` ve `stack` aynen kullanılabilir
+- Mesajların saklama yeri `WeakMap` olduğu için, artık gerekmeyen sınıflar çöp toplayıcıyla temizlenir
+
+## Yapı [#structure]
+
+<CardGroup cols={2}>
+  <Card title="Kurulum" href="/tr/installation" icon="download">
+    Paketin eklenmesi ve Valibot ile eş bağımlılık hakkında.
+  </Card>
+  <Card title="Kullanım" href="/tr/usage" icon="book-open">
+    Sınıf tanımlamadan dil değiştirmeye, önek ve geri dönüşe kadar temel işlemler.
+  </Card>
+  <Card title="API Referansı" href="/tr/api" icon="code">
+    `I18nErrorBase` ve `setErrorMessage` ile ilgili türlerin belirtimi.
+  </Card>
+</CardGroup>
+
+## Nasıl çalışır [#how-it-works]
+
+`I18nErrorBase` oluşturucusu `message` değerini alıcı (getter) olarak tanımlar. Her erişimde aşağıdaki sırayla çözümlenir.
+
+1. `getGlobalConfig()` işlevinden `lang` alınır. Ayarlanmamışsa `"en"` olur
+2. `setErrorMessage` ile kaydedilmiş bir `(sınıf × lang)` işlevi varsa `meta` iletilerek çalıştırılır
+3. Yoksa oluşturucuya verilen dizge veya işlevin sonucu (varsayılan mesaj) döndürülür
+4. `static prefix` ayarlanmışsa başa eklenir
+
+:::tip
+Varsayılan mesajın işlev biçimi ilk erişimde değerlendirilir ve sonrasında önbelleğe alınır. Kayıtlı dillerin mesajları her erişimde `meta` değerinden yeniden üretildiği için dil değiştirme anında yansır.
+:::
+
+## Sonraki adımlar [#next-steps]
+
+Önce [Kurulum](/tr/installation) ile başlayın ve [Kullanım](/tr/usage) bölümünde tüm akışı inceleyin. Tür ve bağımsız değişken ayrıntıları [API Referansı](/tr/api) bölümünde toplanmıştır.

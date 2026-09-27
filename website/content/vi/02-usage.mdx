@@ -1,0 +1,182 @@
+---
+title: Cách dùng
+description: Các thao tác cơ bản như định nghĩa error class, đăng ký thông báo, chuyển ngôn ngữ, prefix và fallback.
+---
+
+## Quy trình cơ bản [#basic-flow]
+
+<Steps>
+  <Step title="Định nghĩa error class">
+    Kế thừa `I18nErrorBase<TMeta>` và định nghĩa thông tin muốn dùng để tạo thông báo dưới dạng `TMeta`.
+  </Step>
+  <Step title="Đăng ký thông báo theo từng ngôn ngữ">
+    Đăng ký thông báo tương ứng với class và ngôn ngữ bằng `setErrorMessage`.
+  </Step>
+  <Step title="Chuyển ngôn ngữ và đọc message">
+    Chuyển bằng `setGlobalConfig({ lang })` của Valibot và truy cập `error.message`.
+  </Step>
+</Steps>
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`);
+  }
+}
+
+setErrorMessage(
+  BusinessRuleError,
+  ({ code, limit }) => `コード: ${code}、制限: ${limit}`,
+  "ja",
+);
+
+const error = new BusinessRuleError({ code: "ERR", limit: 50 });
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // コード: ERR、制限: 50
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Code: ERR, Limit: 50
+```
+
+## Định nghĩa error class [#define-error-class]
+
+`TMeta` là type của thông tin bổ sung dùng để tạo thông báo. Nó được giữ dưới dạng `error.meta` và cũng được truyền cho hàm của `setErrorMessage`.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+console.log(error.meta); // { resource: "user" }
+```
+
+Tham số thứ 2 của constructor là chuỗi hoặc hàm `(meta) => string`. Tham số thứ 3 có thể truyền các option như `{ cause }` giống như `Error`.
+
+```ts
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+const cause = new Error("original");
+const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
+console.log(error.cause === cause); // true
+```
+
+Nếu đặt `TMeta` là `undefined`, bạn có thể bỏ qua `meta`.
+
+```ts
+class NoMetaError extends I18nErrorBase<undefined> {}
+
+const a = new NoMetaError("no meta");
+const b = new NoMetaError(undefined, "no meta");
+console.log(a.meta); // undefined
+```
+
+:::note
+Không dự định dùng `new` trực tiếp `I18nErrorBase`. Hãy luôn tạo class cụ thể kế thừa rồi sử dụng. Vì nơi đăng ký thông báo được phân biệt theo từng constructor (`this.constructor`), thông báo đăng ký ở class cha sẽ không được kế thừa bởi class con.
+:::
+
+## Đăng ký thông báo [#register-message]
+
+`setErrorMessage` đăng ký hàm tạo thông báo cho class và ngôn ngữ.
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
+setErrorMessage(TestError, "something went wrong", "en");
+```
+
+Nếu truyền chuỗi, bên trong sẽ chuyển thành `() => text`. Ngôn ngữ cũng có thể chỉ định bằng mảng chuỗi.
+
+```ts
+const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
+setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
+```
+
+Đăng ký lại cùng class và ngôn ngữ sẽ ghi đè. Nội dung đăng ký không liên quan đến phán đoán `instanceof`, chỉ được dùng khi constructor lúc đăng ký và lúc tham chiếu giống nhau.
+
+:::warning[Lưu ý về truy cập trước khi đăng ký]
+Dạng hàm của thông báo mặc định được đánh giá và cache ở lần truy cập đầu tiên. Nếu đọc `message` bằng ngôn ngữ chưa đăng ký trước `setErrorMessage`, giá trị mặc định đó sẽ bị cố định. Về nguyên tắc, hãy đăng ký thông báo theo từng ngôn ngữ trước khi tạo instance.
+:::
+
+## Chuyển ngôn ngữ [#switch-language]
+
+Ngôn ngữ được chuyển bằng cài đặt toàn cục của Valibot. `message` tham chiếu `lang` hiện tại mỗi lần truy cập.
+
+```ts
+import { setGlobalConfig } from "valibot";
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // 日本語の登録メッセージ
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
+```
+
+Mặc định khi chưa thiết lập `lang` là `"en"`. Nếu yêu cầu ngôn ngữ chưa đăng ký, sẽ fallback về thông báo mặc định đã truyền vào constructor.
+
+```ts
+setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
+
+setGlobalConfig({ lang: "fr" });
+console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
+```
+
+## Thêm tiền tố [#prefix]
+
+Khi đặt `static prefix` cho class, nó sẽ được nối vào đầu thông báo đã giải quyết. Áp dụng cho cả thông báo đã dịch và thông báo mặc định.
+
+```ts
+class PrefixedError extends I18nErrorBase<{ code: string }> {
+  static {
+    this.prefix = "[ERROR] ";
+  }
+}
+
+setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // "[ERROR] code is ERR"
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // "[ERROR] fallback"
+```
+
+Nếu không thiết lập, sẽ trả về nguyên văn không có tiền tố.
+
+## Hành vi dưới dạng Error [#error-behavior]
+
+- `error instanceof Error`, `instanceof I18nErrorBase`, `instanceof` class cụ thể đều là `true`
+- `message` có thể liệt kê được (được bao gồm trong `Object.keys(error)`)
+- `String(error)` / `error.toString()` bao gồm thông báo đã giải quyết (ví dụ: `"Error: ..."`)
+- `cause` được giữ bằng `new TestError(meta, message, { cause })`. Dưới dạng polyfill cho môi trường thực thi cũ, có xử lý gán `options.cause` khi `cause` không được hỗ trợ
+
+## Mẫu thường gặp [#common-patterns]
+
+### Cố định thông báo mặc định trong constructor [#fix-default-message-in-constructor]
+
+```ts
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }, options?: ErrorOptions) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`, options);
+  }
+}
+```
+
+Phía gọi chỉ cần quan tâm đến `meta`, tránh trùng lặp câu mặc định (ở đây là tiếng Anh).
+
+### Đăng ký nhiều ngôn ngữ cùng lúc [#register-multiple-languages]
+
+```ts
+setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
+setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
+```
+
+Không chuẩn hóa mã ngôn ngữ. Vì `"en"` và `"en-US"` được coi là key riêng biệt, hãy đăng ký rõ ràng các mã cần thiết.

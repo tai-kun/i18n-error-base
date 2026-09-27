@@ -1,0 +1,49 @@
+---
+title: Kurulum
+description: i18n-error-base kurulum yöntemi ve çalışma gereksinimleri.
+---
+
+## Gereksinimler [#requirements]
+
+- Node.js gibi ES modüllerini işleyebilen bir çalıştırma ortamı
+- Eş bağımlılık olarak `valibot@^1.0.0` gereklidir
+
+`I18nErrorBase` dahili olarak Valibot'un `getGlobalConfig()` işlevine başvurarak güncel `lang` değerini alır. Valibot kullanmayan projelerde bile, yalnızca dil değiştirmek için `setGlobalConfig({ lang })` çağrısı yapılması çalışması için yeterlidir.
+
+## Kurulum [#installation]
+
+```package-install
+npm i i18n-error-base
+```
+
+Valibot henüz kurulu değilse birlikte ekleyin.
+
+```package-install
+npm i valibot
+```
+
+:::warning[Eş bağımlılığa dikkat]
+`i18n-error-base`, `valibot` paketini içermez. Ana tarafta `valibot@^1.0.0` sağlanmazsa, içe aktarma sırasında çözümleme hatası oluşur.
+:::
+
+## İçe aktarma [#import]
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
+```
+
+Varsayılan dışa aktarımlar da sağlanır.
+
+```ts
+import I18nErrorBase from "i18n-error-base";
+import setErrorMessage from "i18n-error-base";
+```
+
+:::note
+Paket ESM (`"type": "module"`) olarak dağıtılır ve yan etkisi yoktur (`"sideEffects": false`). Tür tanımları `dist/src/*.d.ts` üzerinden çözümlenir.
+:::
+
+## Sonraki adımlar [#next-steps]
+
+[Kullanım](/tr/usage) bölümünde hata sınıfı tanımlama ve dil değiştirmenin temellerini inceleyin.

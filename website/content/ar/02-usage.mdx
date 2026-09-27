@@ -1,0 +1,182 @@
+---
+title: الاستخدام
+description: العمليات الأساسية لتعريف فئات الأخطاء وتسجيل الرسائل وتبديل اللغة والبادئة والتراجع.
+---
+
+## التدفق الأساسي [#basic-flow]
+
+<Steps>
+  <Step title="تعريف فئة الخطأ">
+    ورِّث `I18nErrorBase<TMeta>` وعرِّف المعلومات المطلوبة لإنشاء الرسالة على أنها `TMeta`.
+  </Step>
+  <Step title="تسجيل الرسائل الخاصة بكل لغة">
+    سجِّل الرسالة المقابلة للفئة واللغة عبر `setErrorMessage`.
+  </Step>
+  <Step title="تبديل اللغة وقراءة message">
+    بدِّل اللغة عبر `setGlobalConfig({ lang })` في Valibot، ثم اقرأ `error.message`.
+  </Step>
+</Steps>
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`);
+  }
+}
+
+setErrorMessage(
+  BusinessRuleError,
+  ({ code, limit }) => `コード: ${code}、制限: ${limit}`,
+  "ja",
+);
+
+const error = new BusinessRuleError({ code: "ERR", limit: 50 });
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // コード: ERR、制限: 50
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Code: ERR, Limit: 50
+```
+
+## تعريف فئة الخطأ [#define-error-class]
+
+`TMeta` هو نوع المعلومات الإضافية المستخدمة في إنشاء الرسالة. يُحفَظ على أنه `error.meta` ويُمرَّر أيضًا إلى الدالة المسجلة في `setErrorMessage`.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+console.log(error.meta); // { resource: "user" }
+```
+
+الوسيط الثاني للمُنشئ هو سلسلة نصية أو دالة بالشكل `(meta) => string`. أما الوسيط الثالث فيقبل نفس خيارات `Error` مثل `{ cause }`.
+
+```ts
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+const cause = new Error("original");
+const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
+console.log(error.cause === cause); // true
+```
+
+عند جعل `TMeta` مساويًا لـ`undefined` يمكن حذف `meta`.
+
+```ts
+class NoMetaError extends I18nErrorBase<undefined> {}
+
+const a = new NoMetaError("no meta");
+const b = new NoMetaError(undefined, "no meta");
+console.log(a.meta); // undefined
+```
+
+:::note
+ليس من المفترض إنشاء `I18nErrorBase` نفسها مباشرة عبر `new`. بل أنشئ دائمًا فئة ملموسة وارثة واستخدمها. ونظرًا لأن وجهة تسجيل الرسائل تُميَّز لكل مُنشئ (`this.constructor`)، فإن الرسالة المسجلة على الفئة الأب لا تُورَّث إلى الفئة الابنة.
+:::
+
+## تسجيل الرسائل [#register-message]
+
+تُسجِّل `setErrorMessage` دالة إنشاء الرسالة لفئة ولغة معينتين.
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
+setErrorMessage(TestError, "something went wrong", "en");
+```
+
+تُحوَّل السلسلة النصية داخليًا إلى `() => text`. ويمكن أيضًا تحديد اللغة كمصفوفة من السلاسل النصية.
+
+```ts
+const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
+setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
+```
+
+تؤدي إعادة التسجيل لنفس الفئة واللغة إلى الكتابة فوق القيمة السابقة. ولا يُستخدَم محتوى التسجيل إلا عندما يتطابق المُنشئ وقت التسجيل مع المُنشئ وقت القراءة، بصرف النظر عن حكم `instanceof`.
+
+:::warning[تنبيه بشأن الوصول قبل التسجيل]
+يُقيَّم الشكل الدالّي للرسالة الافتراضية ويُخزَّن مؤقتًا عند أول وصول. فإذا قرأت `message` بلغة غير مسجلة قبل استدعاء `setErrorMessage`، تُثبَّت تلك القيمة الافتراضية. وكقاعدة عامة، سجِّل رسائل كل لغة قبل إنشاء النسخ.
+:::
+
+## تبديل اللغة [#switch-language]
+
+تُبدَّل اللغة عبر الإعداد العالمي في Valibot. وتشير `message` إلى `lang` الحالية عند كل وصول.
+
+```ts
+import { setGlobalConfig } from "valibot";
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // 日本語の登録メッセージ
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
+```
+
+القيمة الافتراضية عند عدم ضبط `lang` هي `"en"`. وعند طلب لغة غير مسجلة، يتم التراجع إلى الرسالة الافتراضية المُمرَّرة إلى المُنشئ.
+
+```ts
+setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
+
+setGlobalConfig({ lang: "fr" });
+console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
+```
+
+## إضافة بادئة [#prefix]
+
+عند ضبط `static prefix` على الفئة، يُوصَل في بداية الرسالة المحلولة. وينطبق ذلك على كل من الرسالة المترجمة والرسالة الافتراضية.
+
+```ts
+class PrefixedError extends I18nErrorBase<{ code: string }> {
+  static {
+    this.prefix = "[ERROR] ";
+  }
+}
+
+setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // "[ERROR] code is ERR"
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // "[ERROR] fallback"
+```
+
+عند عدم ضبطها تُرجَع الرسالة كما هي دون بادئة.
+
+## السلوك ككائن Error [#error-behavior]
+
+- كل من `error instanceof Error` و`instanceof I18nErrorBase` و`instanceof` للفئة الملموسة يكون `true`
+- الخاصية `message` قابلة للتعداد (تُشمَل في `Object.keys(error)`)
+- يتضمن `String(error)` / `error.toString()` الرسالة المحلولة (مثل: `"Error: ..."`)
+- يُحفَظ `cause` عبر `new TestError(meta, message, { cause })`. وكحل بديل (polyfill) لبيئات التنفيذ القديمة، توجد معالجة تُسند `options.cause` عند عدم دعم `cause`
+
+## الأنماط الشائعة [#common-patterns]
+
+### تثبيت الرسالة الافتراضية في المُنشئ [#fix-default-message-in-constructor]
+
+```ts
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }, options?: ErrorOptions) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`, options);
+  }
+}
+```
+
+يكفي أن يهتم المستدعي بـ`meta` فقط، وبذلك يُتجنَّب تكرار النص الافتراضي (الإنجليزية هنا).
+
+### تسجيل لغات متعددة معًا [#register-multiple-languages]
+
+```ts
+setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
+setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
+```
+
+لا تُطبَّق تسوية على رموز اللغة. إذ يُعامَل `"en"` و`"en-US"` كمفتاحين منفصلين، لذلك سجِّل كل رمز مطلوب صراحة.

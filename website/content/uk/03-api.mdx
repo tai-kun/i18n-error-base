@@ -1,0 +1,153 @@
+---
+title: Довідник API
+description: Специфікація I18nErrorBase, setErrorMessage та пов'язаних типів.
+---
+
+## `I18nErrorBase` [#i18n-error-base]
+
+Базовий клас для наслідування `Error`. Перевизначає `message` як гетер і динамічно розв'язує його відповідно до `lang` Valibot.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class MyError extends I18nErrorBase<{ code: string }> {}
+```
+
+### Параметри типу [#type-params]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Тип супутньої інформації, що зберігається як `meta`. Якщо не використовується, вкажіть `undefined`. |
+
+### Статичні властивості [#static-props]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `prefix?` | `string` | `undefined` | Якщо налаштовано, додається на початок розв'язаного повідомлення. |
+
+### Властивості екземпляра [#instance-props]
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `meta` | `TMeta` | Супутня інформація, передана в конструктор. Доступна для читання й запису. |
+| `message` | `string` | Повідомлення, розв'язане відповідно до поточного `lang`. Перелічуване. |
+| `cause` | `unknown` | Причина, передана через `ErrorOptions`. Стандартна властивість `Error`. |
+
+### Конструктор [#constructor]
+
+Якщо `TMeta` не включає `undefined`, `meta` є обов'язковим.
+
+```ts
+new MyError(meta, message, options?)
+```
+
+Якщо `TMeta` — це `undefined`, `meta` можна опустити.
+
+```ts
+new MyError(message, options?)
+new MyError(meta, message, options?)
+```
+
+| Параметр | Тип | Опис |
+| ------------ | -- | ---- |
+| `meta` | `TMeta` | Супутня інформація для генерації повідомлень. |
+| `message` | `string \| MessageFactory<TMeta>` | Повідомлення за замовчуванням для мов без реєстрації. У разі функції приймає `meta`. |
+| `options` | `ErrorOptions` | Опції, сумісні з другим аргументом `Error` (наприклад, `{ cause }`). |
+
+Якщо в `message` передано не рядок (наприклад, число), він перетворюється на рядок через `String(...)`. Якщо фабрика повідомлень повернула порожній рядок, `message` також буде порожнім рядком.
+
+### Порядок розв'язання [#resolution-order]
+
+1. Отримує `lang` із `getGlobalConfig()` (якщо не налаштовано — `"en"`)
+2. Виконує з `meta` функцію відповідного класу та відповідної мови, зареєстровану через `setErrorMessage`
+3. Якщо не зареєстровано, використовує повідомлення за замовчуванням із конструктора (рядок або результат обчислення функції. Після першого обчислення кешується)
+4. Якщо є `static prefix`, додає його на початок
+
+:::note
+Зіставлення реєстрації — це точна відповідність `this.constructor`. Реєстрація для батьківського класу не успадковується дочірнім класом. Зареєструйте для кожного потрібного класу.
+:::
+
+## `setErrorMessage` [#set-error-message]
+
+Реєструє функцію створення повідомлень для кожної мови.
+
+```ts
+import { setErrorMessage } from "i18n-error-base";
+
+setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
+```
+
+| Параметр | Тип | Опис |
+| ------------ | -- | ---- |
+| `reference` | `I18nErrorBaseConstructor` | Клас, що наслідує `I18nErrorBase`. Класи без наслідування спричинять помилку типу. |
+| `message` | `string \| (meta) => string` | Повідомлення для реєстрації. Тип `meta` виводиться з `meta` цільового класу. |
+| `lang` | `string \| Iterable<string>` | Цільова мова. Один код або ітерований об'єкт кодів (наприклад, масив). |
+
+Рядки всередині перетворюються на функції та зберігаються. Повторна реєстрація для того самого класу й тієї самої мови перезаписує попередню. Місце зберігання — `WeakMap` у `globalThis.i18n_error_base__message_map`, де ключ — клас, а значення — `Map` від мови до функції.
+
+## Типи [#types]
+
+### `ErrorMeta` [#error-meta]
+
+```ts
+type ErrorMeta = {
+  readonly [prop: string]: unknown;
+};
+```
+
+Обмеження за замовчуванням для `TMeta`. Представляє доступний лише для читання об'єкт із довільними властивостями.
+
+### `ErrorOptions` [#error-options]
+
+```ts
+type ErrorOptions =
+  ConstructorParameters<typeof Error> extends [
+    message?: unknown,
+    options?: (infer TOptions) | undefined,
+  ]
+    ? TOptions
+    : { readonly cause?: unknown };
+```
+
+Тип, виведений із другого аргументу конструктора `Error` середовища виконання. Можна передавати опції з `cause`. Остання гілка — резервний варіант для старих середовищ.
+
+### `MessageFactory<TMeta>` [#message-factory]
+
+```ts
+interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
+  (meta: TMeta): string;
+}
+```
+
+Функція, що генерує повідомлення з `meta`. Може використовуватися як для повідомлення за замовчуванням у конструкторі, так і для значення реєстрації `setErrorMessage`.
+
+### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
+
+Тип, що представляє перевантаження аргументів конструктора.
+
+```ts
+type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
+  [TMeta] extends [undefined]
+    ?
+        | [message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+        | [meta: undefined, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+    : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
+```
+
+Скорочена форма без `meta` дозволена лише тоді, коли `TMeta` — це `undefined`.
+
+### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
+
+```ts
+interface I18nErrorBaseConstructor {
+  new (...args: any): I18nErrorBase;
+}
+```
+
+Тип першого аргументу `setErrorMessage`. Завдяки внутрішньому символу для ідентифікації домішування класів, що не наслідують `I18nErrorBase`, запобігається на рівні типів.
+
+## Примітки [#notes]
+
+- Значення `lang` за замовчуванням для розв'язання `message` — `"en"`. Явно перемикайте через `setGlobalConfig({ lang })`
+- Нормалізації мовних кодів або ланцюжків резервування (наприклад, відступ від `en-US` до `en`) немає. Незареєстровані мови однаково стають повідомленням за замовчуванням
+- Дані реєстрації зберігаються у `WeakMap` всього процесу. Якщо хочете ізолювати в тестах, можете відкинути їх через `globalThis.i18n_error_base__message_map = undefined`

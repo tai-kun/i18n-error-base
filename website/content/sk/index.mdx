@@ -1,0 +1,67 @@
+---
+title: i18n-error-base
+description: Základná trieda Error, ktorá prepína chybové správy podľa nastavenia jazyka Valibotu.
+---
+
+Základná trieda na dedenie z `Error`, ktorá dynamicky prepína `message` podľa globálneho nastavenia jazyka (`lang`) Valibotu.
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+setErrorMessage(NotFoundError, ({ resource }) => `リソースが見つかりません: ${resource}`, "ja");
+setErrorMessage(NotFoundError, ({ resource }) => `Resource not found: ${resource}`, "en");
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // リソースが見つかりません: user
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Resource not found: user
+```
+
+Pretože sa aktuálne `lang` vyhodnocuje pri každom prístupe k `message`, jazyk možno prepnúť bez opätovného vytvárania inštancií. Pre jazyky bez registrácie sa použije predvolená správa odovzdaná konštruktoru.
+
+## Funkcie [#features]
+
+- Dynamicky vyhodnocuje `message` v súlade s `getGlobalConfig()` / `setGlobalConfig({ lang })` Valibotu
+- Správy pre jednotlivé jazyky sa dodatočne registrujú pomocou `setErrorMessage`. Možno registrovať aj funkcie prijímajúce `meta`
+- Pre jazyky bez registrácie sa použije predvolená správa z konštruktora
+- Pomocou `static prefix` na úrovni triedy možno na začiatok správy pridať predponu
+- `meta` sa uchováva v konštruktore a odovzdáva sa funkciám generujúcim správy
+- Keďže dedí z `Error`, `instanceof Error`, `cause` aj `stack` fungujú bez zmeny
+- Správy sa ukladajú do `WeakMap`, takže nepotrebné triedy môže uvoľniť garbage collector
+
+## Štruktúra [#structure]
+
+<CardGroup cols={2}>
+  <Card title="Inštalácia" href="/sk/installation" icon="download">
+    Pridanie balíčka a peer závislosť od Valibotu.
+  </Card>
+  <Card title="Použitie" href="/sk/usage" icon="book-open">
+    Základné operácie od definície tried cez prepínanie jazykov, prefix až po fallback.
+  </Card>
+  <Card title="Referenčná príručka API" href="/sk/api" icon="code">
+    Špecifikácia `I18nErrorBase` a `setErrorMessage` a súvisiacich typov.
+  </Card>
+</CardGroup>
+
+## Ako to funguje [#how-it-works]
+
+Konštruktor `I18nErrorBase` definuje `message` ako getter. Pri každom prístupe sa vyhodnocuje v nasledujúcom poradí.
+
+1. Získa `lang` z `getGlobalConfig()`. Ak nie je nastavené, je to `"en"`
+2. Ak existuje funkcia `(trieda × lang)` registrovaná pomocou `setErrorMessage`, spustí ju s `meta`
+3. Inak vráti predvolenú správu odovzdanú konštruktoru (reťazec alebo výsledok funkcie)
+4. Ak je nastavený `static prefix`, pripojí ho na začiatok
+
+:::tip
+Funkčná forma predvolenej správy sa vyhodnotí pri prvom prístupe a potom sa ukladá do vyrovnávacej pamäte. Správy registrovaných jazykov sa pri každom prístupe znova generujú z `meta`, takže prepnutie jazyka sa prejaví okamžite.
+:::
+
+## Ďalšie kroky [#next-steps]
+
+Začnite [inštaláciou](/sk/installation) a potom si prejdite celý postup v časti [Použitie](/sk/usage). Podrobnosti o typoch a argumentoch nájdete v [referenčnej príručke API](/sk/api).

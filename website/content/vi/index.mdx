@@ -1,0 +1,67 @@
+---
+title: i18n-error-base
+description: Lớp Error cơ sở chuyển đổi thông báo lỗi đồng bộ với cài đặt ngôn ngữ của Valibot.
+---
+
+Là lớp cơ sở để kế thừa `Error`, chuyển đổi động `message` đồng bộ với cài đặt ngôn ngữ toàn cục (`lang`) của Valibot.
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+setErrorMessage(NotFoundError, ({ resource }) => `リソースが見つかりません: ${resource}`, "ja");
+setErrorMessage(NotFoundError, ({ resource }) => `Resource not found: ${resource}`, "en");
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // リソースが見つかりません: user
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Resource not found: user
+```
+
+Vì `lang` tại thời điểm truy cập `message` được tham chiếu, bạn có thể chuyển ngôn ngữ mà không cần tạo lại instance. Với ngôn ngữ chưa đăng ký, sẽ fallback về thông báo mặc định đã truyền vào constructor.
+
+## Tính năng [#features]
+
+- Tự động giải quyết `message` đồng bộ với `getGlobalConfig()` / `setGlobalConfig({ lang })` của Valibot
+- Đăng ký thông báo theo từng ngôn ngữ sau này bằng `setErrorMessage`. Cũng có thể đăng ký hàm nhận `meta`
+- Với ngôn ngữ chưa đăng ký, sẽ fallback về thông báo mặc định trong constructor
+- Có thể thêm tiền tố vào đầu thông báo bằng `static prefix` theo từng class
+- Giữ `meta` trong constructor và truyền cho hàm tạo thông báo
+- Vì kế thừa `Error` nên `instanceof Error`, `cause`, `stack` vẫn dùng được như bình thường
+- Nơi lưu thông báo là `WeakMap`, nên các class không còn cần sẽ được garbage collect
+
+## Cấu trúc [#structure]
+
+<CardGroup cols={2}>
+  <Card title="Cài đặt" href="/vi/installation" icon="download">
+    Về việc thêm package và peer dependency với Valibot.
+  </Card>
+  <Card title="Cách dùng" href="/vi/usage" icon="book-open">
+    Các thao tác cơ bản từ định nghĩa class đến chuyển ngôn ngữ, prefix và fallback.
+  </Card>
+  <Card title="Tham chiếu API" href="/vi/api" icon="code">
+    Đặc tả của `I18nErrorBase` và `setErrorMessage` cùng các type liên quan.
+  </Card>
+</CardGroup>
+
+## Cơ chế hoạt động [#how-it-works]
+
+Constructor của `I18nErrorBase` định nghĩa `message` dưới dạng getter. Mỗi lần truy cập sẽ giải quyết theo thứ tự sau.
+
+1. Lấy `lang` từ `getGlobalConfig()`. Nếu chưa thiết lập thì là `"en"`
+2. Nếu có hàm `(class × lang)` đã đăng ký bằng `setErrorMessage`, thực thi nó với `meta`
+3. Nếu không có, trả về chuỗi đã truyền vào constructor hoặc kết quả của hàm (thông báo mặc định)
+4. Nếu `static prefix` được thiết lập, nối nó vào đầu thông báo
+
+:::tip
+Dạng hàm của thông báo mặc định được đánh giá ở lần truy cập đầu tiên và được cache sau đó. Thông báo của ngôn ngữ đã đăng ký được tạo lại từ `meta` mỗi lần truy cập, nên việc chuyển ngôn ngữ có hiệu lực ngay lập tức.
+:::
+
+## Các bước tiếp theo [#next-steps]
+
+Hãy bắt đầu từ [Cài đặt](/vi/installation) và xem toàn bộ quy trình trong [Cách dùng](/vi/usage). Chi tiết về type và tham số được tổng hợp trong [Tham chiếu API](/vi/api).

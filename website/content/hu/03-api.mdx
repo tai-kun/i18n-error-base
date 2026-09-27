@@ -1,0 +1,153 @@
+---
+title: API-referencia
+description: Az I18nErrorBase, a setErrorMessage és a kapcsolódó típusok specifikációja.
+---
+
+## `I18nErrorBase` [#i18n-error-base]
+
+Az `Error` öröklésére szolgáló alaposztály. A `message` tulajdonságot getterként definiálja újra, és a Valibot `lang` beállításától függően dinamikusan oldja fel.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class MyError extends I18nErrorBase<{ code: string }> {}
+```
+
+### Típusparaméterek [#type-params]
+
+| Prop | Típus | Alapértelmezett | Leírás |
+| ---- | ---- | ------- | ----------- |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | `meta` néven tárolt kiegészítő adatok típusa. Ha nem használja, adjon meg `undefined` értéket. |
+
+### Statikus tulajdonságok [#static-props]
+
+| Prop | Típus | Alapértelmezett | Leírás |
+| ---- | ---- | ------- | ----------- |
+| `prefix?` | `string` | `undefined` | Beállítás esetén a feloldott üzenet elejére fűződik. |
+
+### Példánytulajdonságok [#instance-props]
+
+| Prop | Típus | Leírás |
+| ---- | ---- | ----------- |
+| `meta` | `TMeta` | A konstruktornak átadott kiegészítő adatok. Olvasható és írható. |
+| `message` | `string` | Az aktuális `lang` alapján feloldott üzenet. Felsorolható. |
+| `cause` | `unknown` | Az `ErrorOptions` segítségével átadott ok. Az `Error` szabványos tulajdonsága. |
+
+### Konstruktor [#constructor]
+
+Ha a `TMeta` nem tartalmazza az `undefined` értéket, a `meta` kötelező.
+
+```ts
+new MyError(meta, message, options?)
+```
+
+Ha a `TMeta` értéke `undefined`, a `meta` elhagyható.
+
+```ts
+new MyError(message, options?)
+new MyError(meta, message, options?)
+```
+
+| Paraméter | Típus | Leírás |
+| ------------ | -- | ---- |
+| `meta` | `TMeta` | Az üzenetgeneráláshoz használt kiegészítő adatok. |
+| `message` | `string \| MessageFactory<TMeta>` | Nem regisztrált nyelvekhez használt alapértelmezett üzenet. Függvény esetén a `meta` értéket fogadja. |
+| `options` | `ErrorOptions` | Az `Error` második argumentumával kompatibilis opciók (pl. `{ cause }`). |
+
+Ha a `message` nem sztring (pl. szám), `String(...)` segítségével sztringgé alakul. Ha az üzenetgyár üres sztringet ad vissza, a `message` is üres sztring lesz.
+
+### Feloldási sorrend [#resolution-order]
+
+1. Lekéri a `getGlobalConfig()` `lang` értékét (beállítás hiányában `"en"`)
+2. Végrehajtja az adott osztályhoz és nyelvhez a `setErrorMessage` segítségével regisztrált függvényt a `meta` átadásával
+3. Ha nincs regisztráció, a konstruktor alapértelmezett üzenetét használja (sztring vagy függvény kiértékelési eredménye; első kiértékelés után gyorsítótárazva)
+4. Ha van `static prefix`, az elejére fűzi
+
+:::note
+Az egyeztetés a `this.constructor` pontos egyezése alapján történik. A szülőosztályhoz tartozó regisztráció nem öröklődik a gyermekosztályokra. Minden szükséges osztályhoz külön regisztráljon.
+:::
+
+## `setErrorMessage` [#set-error-message]
+
+Nyelvenkénti üzenetkészítő függvényt regisztrál.
+
+```ts
+import { setErrorMessage } from "i18n-error-base";
+
+setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
+```
+
+| Paraméter | Típus | Leírás |
+| ------------ | -- | ---- |
+| `reference` | `I18nErrorBaseConstructor` | Az `I18nErrorBase` osztályból öröklő osztály. A nem öröklő osztályok típushibát okoznak. |
+| `message` | `string \| (meta) => string` | A regisztrálandó üzenet. A `meta` típusa a célosztály `meta` tulajdonságából következtethető. |
+| `lang` | `string \| Iterable<string>` | Célnyelv. Egyetlen kód vagy kódok iterálható objektuma (pl. tömb). |
+
+A sztringek belsőleg függvénnyé alakítva tárolódnak. Azonos osztály és nyelv újbóli regisztrálása felülírja a korábbit. Tárolója a `globalThis.i18n_error_base__message_map` `WeakMap`, kulcsa az osztály, értéke a nyelvből függvénybe mutató `Map`.
+
+## Típusok [#types]
+
+### `ErrorMeta` [#error-meta]
+
+```ts
+type ErrorMeta = {
+  readonly [prop: string]: unknown;
+};
+```
+
+A `TMeta` alapértelmezett korlátja. Tetszőleges tulajdonságokkal rendelkező, csak olvasható objektumot jelöl.
+
+### `ErrorOptions` [#error-options]
+
+```ts
+type ErrorOptions =
+  ConstructorParameters<typeof Error> extends [
+    message?: unknown,
+    options?: (infer TOptions) | undefined,
+  ]
+    ? TOptions
+    : { readonly cause?: unknown };
+```
+
+A futtatókörnyezet `Error` konstruktorának második argumentumából származtatott típus. `cause` értéket tartalmazó opciók adhatók át. Az utóbbi ág régebbi környezetekhez készült tartalék.
+
+### `MessageFactory<TMeta>` [#message-factory]
+
+```ts
+interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
+  (meta: TMeta): string;
+}
+```
+
+A `meta` alapján üzenetet generáló függvény. A konstruktor alapértelmezett üzeneteként és a `setErrorMessage` regisztrációs értékeként egyaránt használható.
+
+### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
+
+A konstruktorargumentumok túlterheléseit leíró típus.
+
+```ts
+type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
+  [TMeta] extends [undefined]
+    ?
+        | [message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+        | [meta: undefined, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+    : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
+```
+
+A `meta` rövidített formája csak akkor engedélyezett, ha a `TMeta` értéke `undefined`.
+
+### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
+
+```ts
+interface I18nErrorBaseConstructor {
+  new (...args: any): I18nErrorBase;
+}
+```
+
+A `setErrorMessage` első argumentumának típusa. Belső azonosító szimbólum révén típusszinten megakadályozza a nem `I18nErrorBase` osztályból öröklő osztályok bekeveredését.
+
+## Megjegyzések [#notes]
+
+- A `message` feloldásához használt `lang` alapértelmezett értéke `"en"`. Váltson expliciten a `setGlobalConfig({ lang })` segítségével
+- Nincs nyelvkód-normalizálás vagy tartalék lánc (pl. `en-US` esetén `en` értékre való visszaesés). A nem regisztrált nyelvek egységesen az alapértelmezett üzenetet kapják
+- A regisztrációs adatok a teljes folyamat `WeakMap` tárolójában vannak. Ha teszteléshez el szeretné különíteni, a `globalThis.i18n_error_base__message_map = undefined` értékadással törölheti

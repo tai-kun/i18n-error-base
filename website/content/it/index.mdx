@@ -1,0 +1,67 @@
+---
+title: i18n-error-base
+description: Classe base di Error che cambia i messaggi di errore in sincronia con l'impostazione della lingua di Valibot.
+---
+
+Classe base per estendere `Error` che cambia dinamicamente `message` in sincronia con l'impostazione della lingua globale (`lang`) di Valibot.
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+setErrorMessage(NotFoundError, ({ resource }) => `リソースが見つかりません: ${resource}`, "ja");
+setErrorMessage(NotFoundError, ({ resource }) => `Resource not found: ${resource}`, "en");
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // リソースが見つかりません: user
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Resource not found: user
+```
+
+Poiché il `lang` corrente viene consultato a ogni accesso a `message`, è possibile cambiare lingua senza ricreare le istanze. Per le lingue senza messaggi registrati, si ripiega sul messaggio predefinito passato al costruttore.
+
+## Funzionalità [#features]
+
+- Risolve dinamicamente `message` in sincronia con `getGlobalConfig()` / `setGlobalConfig({ lang })` di Valibot
+- I messaggi per lingua si registrano in un secondo momento con `setErrorMessage`. Si possono registrare anche funzioni che ricevono `meta`
+- Per le lingue senza registrazione, ripiega sul messaggio predefinito del costruttore
+- Permette di aggiungere un prefisso all'inizio del messaggio tramite lo `static prefix` per classe
+- Conserva `meta` nel costruttore e lo passa alle funzioni di generazione dei messaggi
+- Poiché eredita da `Error`, `instanceof Error`, `cause` e `stack` si usano come al solito
+- I messaggi sono archiviati in una `WeakMap`, quindi le classi non più necessarie vengono raccolte dal garbage collector
+
+## Struttura [#structure]
+
+<CardGroup cols={2}>
+  <Card title="Installazione" href="/it/installation" icon="download">
+    Aggiunta del pacchetto e dipendenza peer da Valibot.
+  </Card>
+  <Card title="Utilizzo" href="/it/usage" icon="book-open">
+    Operazioni di base, dalla definizione delle classi al cambio di lingua, al prefisso e al ripiego.
+  </Card>
+  <Card title="Riferimento API" href="/it/api" icon="code">
+    Specifiche di `I18nErrorBase` e `setErrorMessage`, con i tipi correlati.
+  </Card>
+</CardGroup>
+
+## Come funziona [#how-it-works]
+
+Il costruttore di `I18nErrorBase` definisce `message` come getter. Viene risolto a ogni accesso nel seguente ordine.
+
+1. Ottiene `lang` da `getGlobalConfig()`. Se non è impostato, vale `"en"`
+2. Se esiste una funzione `(classe × lang)` registrata con `setErrorMessage`, la esegue passandole `meta`
+3. Altrimenti restituisce il messaggio predefinito passato al costruttore (una stringa o il risultato di una funzione)
+4. Se è impostato uno `static prefix`, lo antepone all'inizio
+
+:::tip
+La forma funzionale del messaggio predefinito viene valutata al primo accesso e poi memorizzata nella cache. I messaggi delle lingue registrate vengono rigenerati da `meta` a ogni accesso, quindi il cambio di lingua ha effetto immediato.
+:::
+
+## Passaggi successivi [#next-steps]
+
+Inizia dall'[Installazione](/it/installation), quindi verifica il flusso completo nell'[Utilizzo](/it/usage). I dettagli su tipi e argomenti sono raccolti nel [Riferimento API](/it/api).

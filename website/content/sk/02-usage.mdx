@@ -1,0 +1,182 @@
+---
+title: Použitie
+description: Definícia chybových tried, registrácia správ, prepínanie jazykov, prefix a základné operácie fallbacku.
+---
+
+## Základný postup [#basic-flow]
+
+<Steps>
+  <Step title="Definujte chybovú triedu">
+    Zdeďte z `I18nErrorBase<TMeta>` a definujte ako `TMeta` informácie, ktoré chcete použiť pri generovaní správy.
+  </Step>
+  <Step title="Registrujte správy pre jednotlivé jazyky">
+    Pomocou `setErrorMessage` registrujte správu zodpovedajúcu triede a jazyku.
+  </Step>
+  <Step title="Prepnite jazyk a prečítajte message">
+    Prepnite pomocou `setGlobalConfig({ lang })` Valibotu a pristúpte k `error.message`.
+  </Step>
+</Steps>
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`);
+  }
+}
+
+setErrorMessage(
+  BusinessRuleError,
+  ({ code, limit }) => `コード: ${code}、制限: ${limit}`,
+  "ja",
+);
+
+const error = new BusinessRuleError({ code: "ERR", limit: 50 });
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // コード: ERR、制限: 50
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Code: ERR, Limit: 50
+```
+
+## Definícia chybovej triedy [#define-error-class]
+
+`TMeta` je typ sprievodných informácií používaných na generovanie správy. Uchováva sa ako `error.meta` a odovzdáva sa aj funkciám v `setErrorMessage`.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+console.log(error.meta); // { resource: "user" }
+```
+
+Druhý argument konštruktora je reťazec alebo funkcia `(meta) => string`. Ako tretí argument možno odovzdať voľby ako `{ cause }`, rovnako ako pri `Error`.
+
+```ts
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+const cause = new Error("original");
+const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
+console.log(error.cause === cause); // true
+```
+
+Ak nastavíte `TMeta` na `undefined`, možno `meta` vynechať.
+
+```ts
+class NoMetaError extends I18nErrorBase<undefined> {}
+
+const a = new NoMetaError("no meta");
+const b = new NoMetaError(undefined, "no meta");
+console.log(a.meta); // undefined
+```
+
+:::note
+`I18nErrorBase` nie je určené na priamu konštrukciu pomocou `new`. Vždy vytvorte konkrétnu zdedenú triedu a tú používajte. Registrácia správ sa rozlišuje podľa konštruktora (`this.constructor`), takže správy registrované pre rodičovskú triedu sa na potomkov neprenášajú.
+:::
+
+## Registrácia správy [#register-message]
+
+`setErrorMessage` registruje funkciu na tvorbu správy pre danú triedu a jazyk.
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
+setErrorMessage(TestError, "something went wrong", "en");
+```
+
+Ak odovzdáte reťazec, interne sa prevedie na `() => text`. Jazyk možno zadať aj ako pole reťazcov.
+
+```ts
+const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
+setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
+```
+
+Opätovná registrácia rovnakej triedy a jazyka pôvodnú hodnotu prepíše. Registrácia sa použije len vtedy, keď je konštruktor pri registrácii a pri prístupe identický, nezávisle od vyhodnotenia `instanceof`.
+
+:::warning[Pozor na prístup pred registráciou]
+Funkčná forma predvolenej správy sa vyhodnotí pri prvom prístupe a uloží do vyrovnávacej pamäte. Ak prečítate `message` v neregistrovanom jazyku pred volaním `setErrorMessage`, táto predvolená hodnota sa zafixuje. Správy pre jednotlivé jazyky preto spravidla registrujte pred vytvorením inštancií.
+:::
+
+## Prepínanie jazyka [#switch-language]
+
+Jazyk sa prepína globálnym nastavením Valibotu. `message` pri každom prístupe zohľadňuje aktuálne `lang`.
+
+```ts
+import { setGlobalConfig } from "valibot";
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // 日本語の登録メッセージ
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
+```
+
+Ak `lang` nie je nastavené, predvolená hodnota je `"en"`. Ak požiadate o jazyk bez registrácie, použije sa predvolená správa odovzdaná konštruktoru.
+
+```ts
+setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
+
+setGlobalConfig({ lang: "fr" });
+console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
+```
+
+## Predpona [#prefix]
+
+Ak triede nastavíte `static prefix`, pripojí sa na začiatok vyhodnotenej správy. Použije sa tak na preložené správy, ako aj na predvolené správy.
+
+```ts
+class PrefixedError extends I18nErrorBase<{ code: string }> {
+  static {
+    this.prefix = "[ERROR] ";
+  }
+}
+
+setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // "[ERROR] code is ERR"
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // "[ERROR] fallback"
+```
+
+Ak nie je nastavená, správa sa vracia bez zmeny bez predpony.
+
+## Správanie ako Error [#error-behavior]
+
+- `error instanceof Error`, `instanceof I18nErrorBase` aj `instanceof` konkrétnej triedy sú vo všetkých prípadoch `true`
+- `message` je enumerovateľné (je obsiahnuté v `Object.keys(error)`)
+- `String(error)` / `error.toString()` obsahujú vyhodnotenú správu (napr. `"Error: ..."`)
+- `cause` sa uchováva pomocou `new TestError(meta, message, { cause })`. Ako polyfill pre staršie behové prostredia je zahrnuté priradenie `options.cause`, keď `cause` nie je podporované
+
+## Bežné vzory [#common-patterns]
+
+### Fixácia predvolenej správy v konštruktore [#fix-default-message-in-constructor]
+
+```ts
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }, options?: ErrorOptions) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`, options);
+  }
+}
+```
+
+Volajúca strana potom pracuje len s `meta` a vyhne sa duplicite predvoleného textu (tu anglického).
+
+### Hromadná registrácia viacerých jazykov [#register-multiple-languages]
+
+```ts
+setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
+setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
+```
+
+Kódy jazykov sa nenormalizujú. `"en"` a `"en-US"` sa považujú za odlišné kľúče, preto potrebné kódy registrujte explicitne.

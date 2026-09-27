@@ -1,0 +1,49 @@
+---
+title: Εγκατάσταση
+description: Πώς να εγκαταστήσετε το i18n-error-base και οι απαιτήσεις λειτουργίας.
+---
+
+## Απαιτήσεις [#requirements]
+
+- Περιβάλλον εκτέλεσης που υποστηρίζει ES modules, όπως το Node.js
+- Απαιτείται το `valibot@^1.0.0` ως peer εξάρτηση
+
+Το `I18nErrorBase` διαβάζει εσωτερικά το `getGlobalConfig()` του Valibot για να λάβει την τρέχουσα `lang`. Ακόμη και σε έργα που δεν χρησιμοποιούν κατά τα άλλα το Valibot, αρκεί να καλέσετε το `setGlobalConfig({ lang })` μόνο για την εναλλαγή γλώσσας.
+
+## Εγκατάσταση [#installation]
+
+```package-install
+npm i i18n-error-base
+```
+
+Αν το Valibot δεν είναι ακόμη εγκατεστημένο, προσθέστε το επίσης.
+
+```package-install
+npm i valibot
+```
+
+:::warning[Προσοχή στην peer εξάρτηση]
+Το `i18n-error-base` δεν ενσωματώνει το `valibot`. Αν η πλευρά υποδοχής δεν παρέχει το `valibot@^1.0.0`, η εισαγωγή θα αποτύχει να επιλυθεί.
+:::
+
+## Εισαγωγή [#import]
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
+```
+
+Παρέχεται επίσης προεπιλεγμένη εξαγωγή.
+
+```ts
+import I18nErrorBase from "i18n-error-base";
+import setErrorMessage from "i18n-error-base";
+```
+
+:::note
+Το πακέτο διανέμεται ως ESM (`"type": "module"`) χωρίς παρενέργειες (`"sideEffects": false`). Οι ορισμοί τύπων επιλύονται από το `dist/src/*.d.ts`.
+:::
+
+## Επόμενα βήματα [#next-steps]
+
+Δείτε τη [Χρήση](/el/usage) για τον ορισμό κλάσης σφάλματος και τα βασικά της εναλλαγής γλωσσών.

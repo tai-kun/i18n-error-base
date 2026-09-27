@@ -1,0 +1,182 @@
+---
+title: Penggunaan
+description: Operasi dasar definisi kelas kesalahan, pendaftaran pesan, pengalihan bahasa, prefix, dan fallback.
+---
+
+## Alur dasar [#basic-flow]
+
+<Steps>
+  <Step title="Mendefinisikan kelas kesalahan">
+    Warisi `I18nErrorBase<TMeta>` dan definisikan informasi yang ingin digunakan untuk pembuatan pesan sebagai `TMeta`.
+  </Step>
+  <Step title="Mendaftarkan pesan tiap bahasa">
+    Daftarkan pesan yang sesuai untuk kelas dan bahasa dengan `setErrorMessage`.
+  </Step>
+  <Step title="Beralih bahasa dan membaca message">
+    Beralih dengan `setGlobalConfig({ lang })` Valibot, lalu akses `error.message`.
+  </Step>
+</Steps>
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`);
+  }
+}
+
+setErrorMessage(
+  BusinessRuleError,
+  ({ code, limit }) => `コード: ${code}、制限: ${limit}`,
+  "ja",
+);
+
+const error = new BusinessRuleError({ code: "ERR", limit: 50 });
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // コード: ERR、制限: 50
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Code: ERR, Limit: 50
+```
+
+## Mendefinisikan kelas kesalahan [#define-error-class]
+
+`TMeta` adalah tipe informasi tambahan yang digunakan untuk pembuatan pesan. Informasi ini disimpan sebagai `error.meta` dan juga diteruskan ke fungsi `setErrorMessage`.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+console.log(error.meta); // { resource: "user" }
+```
+
+Argumen kedua konstruktor adalah string atau fungsi `(meta) => string`. Argumen ketiga dapat diisi opsi yang sama seperti `Error`, misalnya `{ cause }`.
+
+```ts
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+const cause = new Error("original");
+const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
+console.log(error.cause === cause); // true
+```
+
+Jika `TMeta` adalah `undefined`, `meta` dapat dihilangkan.
+
+```ts
+class NoMetaError extends I18nErrorBase<undefined> {}
+
+const a = new NoMetaError("no meta");
+const b = new NoMetaError(undefined, "no meta");
+console.log(a.meta); // undefined
+```
+
+:::note
+`I18nErrorBase` sendiri tidak dimaksudkan untuk langsung di-`new`. Selalu buat dan gunakan kelas konkret yang mewarisinya. Tujuan pendaftaran pesan dibedakan per konstruktor (`this.constructor`), sehingga pesan yang didaftarkan ke kelas induk tidak akan diwarisi oleh kelas anak.
+:::
+
+## Mendaftarkan pesan [#register-message]
+
+`setErrorMessage` mendaftarkan fungsi pembuat pesan untuk kelas dan bahasa tertentu.
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
+setErrorMessage(TestError, "something went wrong", "en");
+```
+
+Jika string diberikan, secara internal diubah menjadi `() => text`. Bahasa juga dapat ditentukan sebagai array string.
+
+```ts
+const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
+setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
+```
+
+Pendaftaran ulang untuk kelas dan bahasa yang sama akan menimpa yang sebelumnya. Isi pendaftaran hanya digunakan ketika konstruktor saat pendaftaran dan saat referensi identik, terlepas dari penilaian `instanceof`.
+
+:::warning[Perhatian akses sebelum pendaftaran]
+Fungsi bentuk pesan default dievaluasi dan di-cache pada akses pertama. Jika `message` dibaca dalam bahasa yang belum terdaftar sebelum `setErrorMessage`, nilai default tersebut akan terkunci. Pada prinsipnya, daftarkan pesan tiap bahasa sebelum pembuatan instans.
+:::
+
+## Beralih bahasa [#switch-language]
+
+Bahasa diganti melalui pengaturan global Valibot. `message` merujuk ke `lang` saat ini setiap kali diakses.
+
+```ts
+import { setGlobalConfig } from "valibot";
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // 日本語の登録メッセージ
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
+```
+
+Nilai default saat `lang` belum diatur adalah `"en"`. Jika meminta bahasa yang tidak terdaftar, akan fallback ke pesan default yang diberikan ke konstruktor.
+
+```ts
+setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
+
+setGlobalConfig({ lang: "fr" });
+console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
+```
+
+## Menambahkan awalan [#prefix]
+
+Jika `static prefix` diatur pada kelas, hasilnya akan digabungkan di awal pesan yang telah diselesaikan. Berlaku baik untuk pesan terjemahan maupun pesan default.
+
+```ts
+class PrefixedError extends I18nErrorBase<{ code: string }> {
+  static {
+    this.prefix = "[ERROR] ";
+  }
+}
+
+setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // "[ERROR] code is ERR"
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // "[ERROR] fallback"
+```
+
+Jika tidak diatur, dikembalikan apa adanya tanpa awalan.
+
+## Perilaku sebagai Error [#error-behavior]
+
+- `error instanceof Error`, `instanceof I18nErrorBase`, maupun `instanceof` kelas konkret semuanya `true`
+- `message` dapat dienumerasi (termasuk dalam `Object.keys(error)`)
+- `String(error)` / `error.toString()` menyertakan pesan yang telah diselesaikan (contoh: `"Error: ..."`)
+- `cause` disimpan melalui `new TestError(meta, message, { cause })`. Sebagai polyfill untuk lingkungan runtime lama, terdapat penanganan yang menetapkan `options.cause` saat `cause` tidak didukung
+
+## Pola umum [#common-patterns]
+
+### Menetapkan pesan default di konstruktor [#fix-default-message-in-constructor]
+
+```ts
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }, options?: ErrorOptions) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`, options);
+  }
+}
+```
+
+Pihak pemanggil cukup memperhatikan `meta` saja, sehingga duplikasi teks default (di sini bahasa Inggris) dapat dihindari.
+
+### Mendaftarkan beberapa bahasa sekaligus [#register-multiple-languages]
+
+```ts
+setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
+setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
+```
+
+Kode bahasa tidak dinormalisasi. `"en"` dan `"en-US"` diperlakukan sebagai kunci yang berbeda, sehingga kode yang dibutuhkan harus didaftarkan secara eksplisit.

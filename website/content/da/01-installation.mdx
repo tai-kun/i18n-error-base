@@ -1,0 +1,49 @@
+---
+title: Installation
+description: Sådan installeres i18n-error-base samt krav til brug.
+---
+
+## Krav [#requirements]
+
+- Et kørselsmiljø, der kan håndtere ES-moduler, f.eks. Node.js
+- `valibot@^1.0.0` kræves som peer-afhængighed
+
+`I18nErrorBase` bruger internt Valibots `getGlobalConfig()` til at hente den aktuelle `lang`. Selv i projekter, der ellers ikke bruger Valibot, er det nok at kalde `setGlobalConfig({ lang })` for at skifte sprog.
+
+## Installation [#installation]
+
+```package-install
+npm i i18n-error-base
+```
+
+Hvis Valibot ikke er installeret endnu, skal du også tilføje det.
+
+```package-install
+npm i valibot
+```
+
+:::warning[Advarsel om peer-afhængighed]
+`i18n-error-base` medtager ikke `valibot`. Hvis værtsprojektet ikke stiller `valibot@^1.0.0` til rådighed, kan importen ikke løses.
+:::
+
+## Import [#import]
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
+```
+
+Der tilbydes også et standardeksport.
+
+```ts
+import I18nErrorBase from "i18n-error-base";
+import setErrorMessage from "i18n-error-base";
+```
+
+:::note
+Pakken distribueres som ESM (`"type": "module"`) uden bivirkninger (`"sideEffects": false`). Typedefinitioner løses fra `dist/src/*.d.ts`.
+:::
+
+## Næste trin [#next-steps]
+
+Se [Brug](/da/usage) for at lære at definere en fejlklasse og det grundlæggende i at skifte sprog.

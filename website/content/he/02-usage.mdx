@@ -1,0 +1,182 @@
+---
+title: שימוש
+description: הגדרת מחלקת שגיאה, רישום הודעות, החלפת שפה, prefix ופעולות fallback בסיסיות.
+---
+
+## התהליך הבסיסי [#basic-flow]
+
+<Steps>
+  <Step title="להגדיר מחלקת שגיאה">
+    לרשת מ-`I18nErrorBase<TMeta>` ולהגדיר כ-`TMeta` את המידע שבו רוצים להשתמש ליצירת ההודעה.
+  </Step>
+  <Step title="לרשום הודעה לכל שפה">
+    לרשום באמצעות `setErrorMessage` את ההודעה המתאימה למחלקה ולשפה.
+  </Step>
+  <Step title="להחליף שפה ולקרוא את message">
+    להחליף באמצעות `setGlobalConfig({ lang })` של Valibot ולגשת ל-`error.message`.
+  </Step>
+</Steps>
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`);
+  }
+}
+
+setErrorMessage(
+  BusinessRuleError,
+  ({ code, limit }) => `コード: ${code}、制限: ${limit}`,
+  "ja",
+);
+
+const error = new BusinessRuleError({ code: "ERR", limit: 50 });
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // コード: ERR、制限: 50
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Code: ERR, Limit: 50
+```
+
+## הגדרת מחלקת שגיאה [#define-error-class]
+
+`TMeta` הוא טיפוס המידע הנלווה המשמש ליצירת ההודעה. הוא נשמר כ-`error.meta` ומועבר גם לפונקציה של `setErrorMessage`.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+console.log(error.meta); // { resource: "user" }
+```
+
+הארגומנט השני של הקונסטרקטור הוא מחרוזת או פונקציה מהצורה `(meta) => string`. כארגומנט שלישי ניתן להעביר אפשרויות כמו `{ cause }`, בדומה ל-`Error`.
+
+```ts
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+const cause = new Error("original");
+const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
+console.log(error.cause === cause); // true
+```
+
+אם מגדירים את `TMeta` כ-`undefined`, ניתן להשמיט את `meta`.
+
+```ts
+class NoMetaError extends I18nErrorBase<undefined> {}
+
+const a = new NoMetaError("no meta");
+const b = new NoMetaError(undefined, "no meta");
+console.log(a.meta); // undefined
+```
+
+:::note
+אין כוונה לבצע `new` ישירות על `I18nErrorBase` עצמו. תמיד צרו מחלקה קונקרטית שיורשת ממנו והשתמשו בה. יעד הרישום של ההודעות מובחן לפי יחידת קונסטרקטור (`this.constructor`), ולכן הודעה שנרשמה למחלקת האב אינה עוברת בירושה למחלקת הבן.
+:::
+
+## רישום הודעה [#register-message]
+
+`setErrorMessage` רושם פונקציית יצירת הודעה עבור מחלקה ושפה.
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
+setErrorMessage(TestError, "something went wrong", "en");
+```
+
+אם מועברת מחרוזת, היא מומרת פנימית ל-`() => text`. ניתן לציין את השפה גם כמערך של מחרוזות.
+
+```ts
+const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
+setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
+```
+
+רישום חוזר לאותה מחלקה ואותה שפה דורס את הקודם. תוכן הרישום אינו קשור לשיפוט `instanceof`, והוא משמש רק כאשר הקונסטרקטור בעת הרישום זהה לקונסטרקטור בעת ההתייחסות.
+
+:::warning[שימו לב לגישה לפני הרישום]
+צורת הפונקציה של הודעת ברירת המחדל מוערכת ונשמרת במטמון בגישה הראשונה. אם קוראים את `message` בשפה שלא נרשמה לפני `setErrorMessage`, ערך ברירת המחדל הזה מתקבע. כעיקרון, רשמו את ההודעות לכל שפה לפני יצירת המופע.
+:::
+
+## החלפת שפה [#switch-language]
+
+השפה מוחלפת באמצעות ההגדרה הגלובלית של Valibot. `message` מתייחס ל-`lang` העדכני בכל גישה.
+
+```ts
+import { setGlobalConfig } from "valibot";
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // 日本語の登録メッセージ
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
+```
+
+ברירת המחדל של `lang` כאשר אינו מוגדר היא `"en"`. אם מבוקשת שפה שלא נרשמה, מתבצע fallback להודעת ברירת המחדל שהועברה לקונסטרקטור.
+
+```ts
+setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
+
+setGlobalConfig({ lang: "fr" });
+console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
+```
+
+## הוספת תחילית [#prefix]
+
+אם מגדירים `static prefix` במחלקה, הוא משורשר לתחילת ההודעה שנפתרה. הוא חל הן על ההודעה המתורגמת והן על הודעת ברירת המחדל.
+
+```ts
+class PrefixedError extends I18nErrorBase<{ code: string }> {
+  static {
+    this.prefix = "[ERROR] ";
+  }
+}
+
+setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // "[ERROR] code is ERR"
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // "[ERROR] fallback"
+```
+
+אם לא מגדירים זאת, ההודעה מוחזרת כמות שהיא ללא תחילית.
+
+## התנהגות כ-Error [#error-behavior]
+
+- `error instanceof Error`, `instanceof I18nErrorBase` ו-`instanceof` של המחלקה הקונקרטית כולם `true`
+- `message` ניתן למנייה (נכלל ב-`Object.keys(error)`)
+- `String(error)` / `error.toString()` כוללים את ההודעה שנפתרה (לדוגמה: `"Error: ..."`)
+- `cause` נשמר באמצעות `new TestError(meta, message, { cause })`. כ-polyfill לסביבות הרצה ישנות, קיים טיפול המשייך את `options.cause` כאשר `cause` אינו נתמך
+
+## דפוסים נפוצים [#common-patterns]
+
+### קיבוע הודעת ברירת המחדל בקונסטרקטור [#fix-default-message-in-constructor]
+
+```ts
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }, options?: ErrorOptions) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`, options);
+  }
+}
+```
+
+הצד הקורא צריך להתייחס רק ל-`meta`, וניתן להימנע מכפילות של טקסט ברירת המחדל (כאן באנגלית).
+
+### רישום מספר שפות יחד [#register-multiple-languages]
+
+```ts
+setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
+setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
+```
+
+לא מתבצעת נרמול של קודי שפה. `"en"` ו-`"en-US"` מטופלים כמפתחות נפרדים, ולכן רשמו במפורש את הקודים הדרושים.

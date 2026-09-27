@@ -1,0 +1,49 @@
+---
+title: 설치
+description: i18n-error-base의 설치 방법과 동작 요구 사항입니다.
+---
+
+## 요구 사항 [#requirements]
+
+- Node.js 등 ES 모듈을 다룰 수 있는 실행 환경
+- 피어 의존성으로 `valibot@^1.0.0`이 필요합니다
+
+`I18nErrorBase`는 내부에서 Valibot의 `getGlobalConfig()`를 참조하여 현재 `lang`을 가져옵니다. Valibot을 사용하지 않는 프로젝트에서도, 언어 전환을 위해서만 `setGlobalConfig({ lang })`을 호출하면 동작합니다.
+
+## 설치 [#installation]
+
+```package-install
+npm i i18n-error-base
+```
+
+Valibot이 아직 설치되지 않은 경우 함께 추가하십시오.
+
+```package-install
+npm i valibot
+```
+
+:::warning[피어 의존성 주의]
+`i18n-error-base`는 `valibot`을 번들하지 않습니다. 호스트 측에서 `valibot@^1.0.0`을 준비하지 않으면 가져올 때 해결 오류가 발생합니다.
+:::
+
+## 가져오기 [#import]
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
+```
+
+기본 내보내기도 제공됩니다.
+
+```ts
+import I18nErrorBase from "i18n-error-base";
+import setErrorMessage from "i18n-error-base";
+```
+
+:::note
+패키지는 ESM(`"type": "module"`)으로 배포되며, 부수 효과가 없습니다(`"sideEffects": false`). 타입 정의는 `dist/src/*.d.ts`에서 해결됩니다.
+:::
+
+## 다음 단계 [#next-steps]
+
+[사용법](/ko/usage)에서 오류 클래스의 정의와 언어 전환의 기본 사항을 확인하십시오.

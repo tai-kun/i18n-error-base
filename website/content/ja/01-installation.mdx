@@ -3,14 +3,14 @@ title: インストール
 description: i18n-error-base のインストール方法と動作要件。
 ---
 
-## 要件
+## 要件 [#requirements]
 
 - Node.js など ES モジュールを扱える実行環境
 - ピア依存として `valibot@^1.0.0` が必要です
 
 `I18nErrorBase` は内部で Valibot の `getGlobalConfig()` を参照し、現在の `lang` を取得します。Valibot を使っていないプロジェクトでも、言語切り替えのためだけに `setGlobalConfig({ lang })` を呼び出せば動作します。
 
-## インストール
+## インストール [#installation]
 
 ```package-install
 npm i i18n-error-base
@@ -26,7 +26,7 @@ npm i valibot
 `i18n-error-base` は `valibot` をバンドルしません。ホスト側で `valibot@^1.0.0` を用意しないと、インポート時に解決エラーになります。
 :::
 
-## インポート
+## インポート [#import]
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";

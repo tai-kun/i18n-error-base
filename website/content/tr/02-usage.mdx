@@ -1,0 +1,182 @@
+---
+title: Kullanım
+description: Hata sınıfı tanımlama, mesaj kaydetme, dil değiştirme, önek ve geri dönüş temel işlemleri.
+---
+
+## Temel akış [#basic-flow]
+
+<Steps>
+  <Step title="Hata sınıfını tanımlayın">
+    `I18nErrorBase<TMeta>` sınıfından türetin ve mesaj üretiminde kullanmak istediğiniz bilgileri `TMeta` olarak tanımlayın.
+  </Step>
+  <Step title="Dile özgü mesajları kaydedin">
+    `setErrorMessage` ile sınıfa ve dile karşılık gelen mesajları kaydedin.
+  </Step>
+  <Step title="Dili değiştirip message değerini okuyun">
+    Valibot'un `setGlobalConfig({ lang })` işleviyle değiştirin ve `error.message` değerine erişin.
+  </Step>
+</Steps>
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`);
+  }
+}
+
+setErrorMessage(
+  BusinessRuleError,
+  ({ code, limit }) => `コード: ${code}、制限: ${limit}`,
+  "ja",
+);
+
+const error = new BusinessRuleError({ code: "ERR", limit: 50 });
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // コード: ERR、制限: 50
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Code: ERR, Limit: 50
+```
+
+## Hata sınıfını tanımlama [#define-error-class]
+
+`TMeta`, mesaj üretiminde kullanılan ek bilginin türüdür. `error.meta` olarak saklanır ve `setErrorMessage` işlevine de aktarılır.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+console.log(error.meta); // { resource: "user" }
+```
+
+Oluşturucunun 2. bağımsız değişkeni bir dizge veya `(meta) => string` işlevidir. 3. bağımsız değişken olarak `Error` ile aynı `{ cause }` gibi seçenekler geçirilebilir.
+
+```ts
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+const cause = new Error("original");
+const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
+console.log(error.cause === cause); // true
+```
+
+`TMeta` değeri `undefined` olduğunda `meta` atlanabilir.
+
+```ts
+class NoMetaError extends I18nErrorBase<undefined> {}
+
+const a = new NoMetaError("no meta");
+const b = new NoMetaError(undefined, "no meta");
+console.log(a.meta); // undefined
+```
+
+:::note
+`I18nErrorBase` sınıfının doğrudan `new` ile kullanılması amaçlanmamıştır. Mutlaka türetilmiş somut bir sınıf oluşturup kullanın. Mesajların kayıt yeri oluşturucu birimi (`this.constructor`) bazında ayırt edildiği için, üst sınıfa kaydedilen mesajlar alt sınıflara aktarılmaz.
+:::
+
+## Mesajı kaydetme [#register-message]
+
+`setErrorMessage`, sınıfa ve dile yönelik mesaj üretim işlevini kaydeder.
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
+setErrorMessage(TestError, "something went wrong", "en");
+```
+
+Dizge geçirilirse dahili olarak `() => text` biçimine dönüştürülür. Dil, dizge dizisi olarak da belirtilebilir.
+
+```ts
+const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
+setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
+```
+
+Aynı sınıf ve dile yeniden kayıt yapılırsa üzerine yazılır. Kayıt içeriği, `instanceof` değerlendirmesinden bağımsız olarak yalnızca kayıt sırasındaki ve başvuru sırasındaki oluşturucu aynı olduğunda kullanılır.
+
+:::warning[Kayıttan önce erişime dikkat]
+Varsayılan mesajın işlev biçimi ilk erişimde değerlendirilip önbelleğe alınır. `setErrorMessage` çağrısından önce kayıtsız bir dilde `message` okunursa, bu varsayılan değer sabitlenir. Dile özgü mesajları ilke olarak örnek oluşturmadan önce kaydedin.
+:::
+
+## Dili değiştirme [#switch-language]
+
+Dil, Valibot'un genel ayarıyla değiştirilir. `message` her erişimde güncel `lang` değerine başvurur.
+
+```ts
+import { setGlobalConfig } from "valibot";
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // 日本語の登録メッセージ
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
+```
+
+`lang` ayarlanmadığında varsayılan `"en"` olur. Kayıtlı mesajı olmayan bir dil istenirse, oluşturucuya verilen varsayılan mesaja geri dönülür.
+
+```ts
+setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
+
+setGlobalConfig({ lang: "fr" });
+console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
+```
+
+## Önek ekleme [#prefix]
+
+Sınıfa `static prefix` ayarlanırsa, çözümlenmiş mesajın başına eklenir. Çevrilmiş mesaja da varsayılan mesaja da uygulanır.
+
+```ts
+class PrefixedError extends I18nErrorBase<{ code: string }> {
+  static {
+    this.prefix = "[ERROR] ";
+  }
+}
+
+setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // "[ERROR] code is ERR"
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // "[ERROR] fallback"
+```
+
+Ayarlanmazsa öneksiz olarak aynen döndürülür.
+
+## Error olarak davranış [#error-behavior]
+
+- `error instanceof Error`, `instanceof I18nErrorBase`, `instanceof somut sınıf` değerlerinin tümü `true` olur
+- `message` numaralandırılabilir (`Object.keys(error)` içinde yer alır)
+- `String(error)` / `error.toString()` çözümlenmiş mesajı içerir (ör: `"Error: ..."`)
+- `cause`, `new TestError(meta, message, { cause })` ile saklanır. Eski çalıştırma ortamlarına yönelik çoklu doldurma olarak, `cause` desteklenmediğinde `options.cause` değerini atayan işlem dahildir
+
+## Yaygın kalıplar [#common-patterns]
+
+### Varsayılan mesajı oluşturucuda sabitleme [#fix-default-message-in-constructor]
+
+```ts
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }, options?: ErrorOptions) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`, options);
+  }
+}
+```
+
+Çağıran taraf yalnızca `meta` değerine odaklanırsa yeterli olur ve varsayılan metnin (burada İngilizce) yinelenmesi önlenebilir.
+
+### Birden çok dili topluca kaydetme [#register-multiple-languages]
+
+```ts
+setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
+setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
+```
+
+Dil kodları normalize edilmez. `"en"` ve `"en-US"` ayrı anahtarlar olarak işlenir, bu nedenle gerekli kodları açıkça kaydedin.

@@ -1,0 +1,153 @@
+---
+title: ייחוס API
+description: המפרט של I18nErrorBase,‏ setErrorMessage והטיפוסים הקשורים.
+---
+
+## `I18nErrorBase` [#i18n-error-base]
+
+מחלקת בסיס לירושת `Error`. מגדירה מחדש את `message` כ-getter ופותרת אותו באופן דינמי בהתאם ל-`lang` של Valibot.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class MyError extends I18nErrorBase<{ code: string }> {}
+```
+
+### פרמטרי טיפוס [#type-params]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | טיפוס המידע הנלווה הנשמר כ-`meta`. אם אינו בשימוש, ציינו `undefined`. |
+
+### מאפיינים סטטיים [#static-props]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `prefix?` | `string` | `undefined` | אם מוגדר, משורשר לתחילת ההודעה שנפתרה. |
+
+### מאפייני מופע [#instance-props]
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `meta` | `TMeta` | המידע הנלווה שהועבר לקונסטרקטור. ניתן לקריאה ולכתיבה. |
+| `message` | `string` | ההודעה הנפתרת בהתאם ל-`lang` העדכני. ניתנת למנייה. |
+| `cause` | `unknown` | הסיבה שהועברה באמצעות `ErrorOptions`. מאפיין תקני של `Error`. |
+
+### קונסטרקטור [#constructor]
+
+כאשר `TMeta` אינו כולל `undefined`, `meta` הוא חובה.
+
+```ts
+new MyError(meta, message, options?)
+```
+
+כאשר `TMeta` הוא `undefined`, ניתן להשמיט את `meta`.
+
+```ts
+new MyError(message, options?)
+new MyError(meta, message, options?)
+```
+
+| פרמטר | סוג | תיאור |
+| ------------ | -- | ---- |
+| `meta` | `TMeta` | המידע הנלווה המשמש ליצירת ההודעה. |
+| `message` | `string \| MessageFactory<TMeta>` | הודעת ברירת המחדל לשפות שלא נרשמו. אם זו פונקציה, היא מקבלת `meta`. |
+| `options` | `ErrorOptions` | אפשרויות התואמות לארגומנט השני של `Error` (כגון `{ cause }`). |
+
+אם מועבר ל-`message` ערך שאינו מחרוזת (כגון מספר), הוא מומר למחרוזת באמצעות `String(...)`. אם מפעל ההודעות החזיר מחרוזת ריקה, גם `message` יהיה מחרוזת ריקה.
+
+### סדר הפתרון [#resolution-order]
+
+1. מקבל את `lang` מתוך `getGlobalConfig()` (אם לא הוגדר, `"en"`)
+2. מפעיל את הפונקציה שנרשמה באמצעות `setErrorMessage` עבור המחלקה והשפה הללו, עם `meta`
+3. אם לא נרשם, משתמש בהודעת ברירת המחדל של הקונסטרקטור (מחרוזת או תוצאת הערכת פונקציה. לאחר ההערכה הראשונה נשמר במטמון)
+4. אם קיים `static prefix`, משרשר אותו להתחלה
+
+:::note
+ההתאמה של הרישום היא התאמה מדויקת של `this.constructor`. רישום למחלקת האב אינו עובר בירושה למחלקת הבן. רשמו לכל מחלקה נדרשת בנפרד.
+:::
+
+## `setErrorMessage` [#set-error-message]
+
+רושם פונקציית יצירת הודעה לכל שפה.
+
+```ts
+import { setErrorMessage } from "i18n-error-base";
+
+setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
+```
+
+| פרמטר | סוג | תיאור |
+| ------------ | -- | ---- |
+| `reference` | `I18nErrorBaseConstructor` | מחלקה היורשת מ-`I18nErrorBase`. מחלקה שאינה יורשת תגרום לשגיאת טיפוס. |
+| `message` | `string \| (meta) => string` | ההודעה לרישום. טיפוס ה-`meta` מוסק מתוך ה-`meta` של המחלקה היעד. |
+| `lang` | `string \| Iterable<string>` | שפת היעד. קוד בודד או אובייקט איטרבילי של קודים (כגון מערך). |
+
+מחרוזת מומרת פנימית לפונקציה ונשמרת. רישום חוזר לאותה מחלקה ואותה שפה דורס את הקודם. יעד השמירה הוא `WeakMap` ב-`globalThis.i18n_error_base__message_map`, כאשר המפתח הוא המחלקה והערך הוא `Map` מפונקציות לפי שפה.
+
+## טיפוסים [#types]
+
+### `ErrorMeta` [#error-meta]
+
+```ts
+type ErrorMeta = {
+  readonly [prop: string]: unknown;
+};
+```
+
+אילוץ ברירת המחדל של `TMeta`. מייצג אובייקט לקריאה בלבד עם מאפיינים שרירותיים.
+
+### `ErrorOptions` [#error-options]
+
+```ts
+type ErrorOptions =
+  ConstructorParameters<typeof Error> extends [
+    message?: unknown,
+    options?: (infer TOptions) | undefined,
+  ]
+    ? TOptions
+    : { readonly cause?: unknown };
+```
+
+טיפוס הנגזר מהארגומנט השני של קונסטרקטור ה-`Error` בסביבת ההרצה. ניתן להעביר אפשרויות הכוללות `cause`. הענף השני הוא fallback לסביבות ישנות.
+
+### `MessageFactory<TMeta>` [#message-factory]
+
+```ts
+interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
+  (meta: TMeta): string;
+}
+```
+
+פונקציה היוצרת הודעה מתוך `meta`. משמשת הן להודעת ברירת המחדל של הקונסטרקטור והן לערך הרישום של `setErrorMessage`.
+
+### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
+
+טיפוס המייצג את ה-overload של ארגומנטי הקונסטרקטור.
+
+```ts
+type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
+  [TMeta] extends [undefined]
+    ?
+        | [message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+        | [meta: undefined, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+    : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
+```
+
+צורת ההשמטה של `meta` מותרת רק כאשר `TMeta` הוא `undefined`.
+
+### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
+
+```ts
+interface I18nErrorBaseConstructor {
+  new (...args: any): I18nErrorBase;
+}
+```
+
+טיפוס הארגומנט הראשון של `setErrorMessage`. באמצעות סמל לזיהוי פנימי, מונע ברמת הטיפוס ערבוב של מחלקות שאינן יורשות מ-`I18nErrorBase`.
+
+## הערות [#notes]
+
+- ערך ברירת המחדל של `lang` המשמש לפתרון `message` הוא `"en"`. החליפו במפורש באמצעות `setGlobalConfig({ lang })`
+- אין נרמול של קודי שפה ואין שרשרת fallback (לדוגמה: נסיגה מ-`en-US` ל-`en`). שפה שלא נרשמה הופכת באופן אחיד להודעת ברירת המחדל
+- נתוני הרישום נשמרים ב-`WeakMap` כלל-תהליכי. כדי לבודד בבדיקות, ניתן להשמיד באמצעות `globalThis.i18n_error_base__message_map = undefined`

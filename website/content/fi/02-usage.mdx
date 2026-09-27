@@ -1,0 +1,182 @@
+---
+title: Käyttö
+description: Virheluokan määrittäminen, viestien rekisteröinti, kielen vaihtaminen, etuliite ja varaviestin perustoiminnot.
+---
+
+## Perustyönkulku [#basic-flow]
+
+<Steps>
+  <Step title="Määritä virheluokka">
+    Peri `I18nErrorBase<TMeta>` ja määritä `TMeta`-tyypiksi tiedot, joita haluat käyttää viestin luomisessa.
+  </Step>
+  <Step title="Rekisteröi kielikohtaiset viestit">
+    Rekisteröi luokkaa ja kieltä vastaava viesti `setErrorMessage`-funktiolla.
+  </Step>
+  <Step title="Vaihda kieltä ja lue message">
+    Vaihda kieltä Valibotin `setGlobalConfig({ lang })` -funktiolla ja käytä `error.message`-ominaisuutta.
+  </Step>
+</Steps>
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`);
+  }
+}
+
+setErrorMessage(
+  BusinessRuleError,
+  ({ code, limit }) => `コード: ${code}、制限: ${limit}`,
+  "ja",
+);
+
+const error = new BusinessRuleError({ code: "ERR", limit: 50 });
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // コード: ERR、制限: 50
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Code: ERR, Limit: 50
+```
+
+## Virheluokan määrittäminen [#define-error-class]
+
+`TMeta` on viestin luomisessa käytettävien liitännäistietojen tyyppi. Se säilytetään muodossa `error.meta` ja välitetään myös `setErrorMessage`-funktion funktioille.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+console.log(error.meta); // { resource: "user" }
+```
+
+Rakentajan toinen argumentti on merkkijono tai funktio `(meta) => string`. Kolmantena argumenttina voidaan antaa samat valinnat kuin `Error`-luokalle, kuten `{ cause }`.
+
+```ts
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+const cause = new Error("original");
+const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
+console.log(error.cause === cause); // true
+```
+
+Jos `TMeta` on `undefined`, `meta` voidaan jättää pois.
+
+```ts
+class NoMetaError extends I18nErrorBase<undefined> {}
+
+const a = new NoMetaError("no meta");
+const b = new NoMetaError(undefined, "no meta");
+console.log(a.meta); // undefined
+```
+
+:::note
+`I18nErrorBase`-luokkaa ei ole tarkoitettu käytettäväksi suoraan `new`-operaattorilla. Peri siitä aina konkreettinen luokka. Viestien rekisteröinti erotellaan rakentajakohtaisesti (`this.constructor`), joten yliluokkaan rekisteröidyt viestit eivät periydy aliluokkiin.
+:::
+
+## Viestin rekisteröinti [#register-message]
+
+`setErrorMessage` rekisteröi luokkaa ja kieltä vastaavan viestin luontifunktion.
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
+setErrorMessage(TestError, "something went wrong", "en");
+```
+
+Merkkijono muunnetaan sisäisesti muotoon `() => text`. Kielen voi antaa myös merkkijonotaulukkona.
+
+```ts
+const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
+setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
+```
+
+Saman luokan ja kielen uudelleenrekisteröinti korvaa aiemman. Rekisteröinnin sisältö ei liity `instanceof`-tarkistukseen, vaan sitä käytetään vain, kun rekisteröintihetken ja viittaushetken rakentaja ovat samat.
+
+:::warning[Huomio rekisteröintiä edeltävästä käytöstä]
+Oletusviestin funktiomuoto arvioidaan ensimmäisellä käyttökerralla ja tallennetaan välimuistiin. Jos `message` luetaan rekisteröimättömällä kielellä ennen `setErrorMessage`-kutsua, oletusarvo kiinnitetään. Rekisteröi kielikohtaiset viestit pääsääntöisesti ennen instanssien luomista.
+:::
+
+## Kielen vaihtaminen [#switch-language]
+
+Kieli vaihdetaan Valibotin globaalilla asetuksella. `message` viittaa senhetkiseen `lang`-arvoon jokaisella käyttökerralla.
+
+```ts
+import { setGlobalConfig } from "valibot";
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // 日本語の登録メッセージ
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
+```
+
+Jos `lang`-arvoa ei ole asetettu, oletus on `"en"`. Jos pyydetylle kielelle ei ole rekisteröity viestiä, käytetään rakentajalle annettua oletusviestiä.
+
+```ts
+setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
+
+setGlobalConfig({ lang: "fr" });
+console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
+```
+
+## Etuliite [#prefix]
+
+Kun luokalle asetetaan `static prefix`, se liitetään ratkaistun viestin alkuun. Sitä sovelletaan sekä käännettyihin viesteihin että oletusviesteihin.
+
+```ts
+class PrefixedError extends I18nErrorBase<{ code: string }> {
+  static {
+    this.prefix = "[ERROR] ";
+  }
+}
+
+setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // "[ERROR] code is ERR"
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // "[ERROR] fallback"
+```
+
+Jos sitä ei aseteta, viesti palautetaan sellaisenaan ilman etuliitettä.
+
+## Käyttäytyminen Error-luokkana [#error-behavior]
+
+- `error instanceof Error`, `instanceof I18nErrorBase` ja `instanceof`-tarkistus konkreettisella luokalla ovat kaikki `true`
+- `message` on lueteltavissa (sisältyy `Object.keys(error)`-tulokseen)
+- `String(error)` / `error.toString()` sisältää ratkaistun viestin (esim. `"Error: ..."`)
+- `cause` säilytetään muodossa `new TestError(meta, message, { cause })`. Vanhoja suoritusympäristöjä varten on polyfill, joka sijoittaa `options.cause`-arvon, kun `cause` ei ole tuettu
+
+## Yleiset mallit [#common-patterns]
+
+### Oletusviestin kiinnittäminen rakentajassa [#fix-default-message-in-constructor]
+
+```ts
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }, options?: ErrorOptions) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`, options);
+  }
+}
+```
+
+Kutsujan tarvitsee välittää vain `meta`, ja oletustekstin (tässä englannin) toisto vältetään.
+
+### Useiden kielten rekisteröinti kerralla [#register-multiple-languages]
+
+```ts
+setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
+setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
+```
+
+Kielikoodeja ei normalisoida. `"en"` ja `"en-US"` käsitellään eri avaimina, joten tarvittavat koodit on rekisteröitävä erikseen.

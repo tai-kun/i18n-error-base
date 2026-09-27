@@ -1,0 +1,49 @@
+---
+title: 安装
+description: i18n-error-base 的安装方法与运行要求。
+---
+
+## 运行要求 [#requirements]
+
+- 可处理 ES 模块的运行环境，例如 Node.js
+- 需要 `valibot@^1.0.0` 作为对等依赖
+
+`I18nErrorBase` 在内部参照 Valibot 的 `getGlobalConfig()` 获取当前 `lang`。即使在未使用 Valibot 的项目中，只要为切换语言而调用 `setGlobalConfig({ lang })` 即可正常工作。
+
+## 安装 [#installation]
+
+```package-install
+npm i i18n-error-base
+```
+
+如果尚未引入 Valibot，请一并添加。
+
+```package-install
+npm i valibot
+```
+
+:::warning[注意对等依赖]
+`i18n-error-base` 不会打包 `valibot`。如果宿主侧未准备 `valibot@^1.0.0`，导入时会出现解析错误。
+:::
+
+## 导入 [#import]
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
+```
+
+同时提供了默认导出。
+
+```ts
+import I18nErrorBase from "i18n-error-base";
+import setErrorMessage from "i18n-error-base";
+```
+
+:::note
+该包以 ESM（`"type": "module"`）形式分发，且无副作用（`"sideEffects": false`）。类型定义从 `dist/src/*.d.ts` 解析。
+:::
+
+## 下一步 [#next-steps]
+
+请在[使用方法](/zh/usage)中确认错误类的定义与语言切换基础。

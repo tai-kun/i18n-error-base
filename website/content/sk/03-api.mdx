@@ -1,0 +1,153 @@
+---
+title: Referenčná príručka API
+description: Špecifikácia I18nErrorBase, setErrorMessage a súvisiacich typov.
+---
+
+## `I18nErrorBase` [#i18n-error-base]
+
+Základná trieda na dedenie z `Error`. Znovu definuje `message` ako getter a dynamicky ho vyhodnocuje podľa `lang` Valibotu.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class MyError extends I18nErrorBase<{ code: string }> {}
+```
+
+### Parametre typu [#type-params]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Typ sprievodných informácií uchovávaných ako `meta`. Ak sa nepoužívajú, zadajte `undefined`. |
+
+### Statické vlastnosti [#static-props]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `prefix?` | `string` | `undefined` | Ak je nastavená, pripojí sa na začiatok vyhodnotenej správy. |
+
+### Vlastnosti inštancie [#instance-props]
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `meta` | `TMeta` | Sprievodné informácie odovzdané konštruktoru. Možno čítať aj zapisovať. |
+| `message` | `string` | Správa vyhodnotená podľa aktuálneho `lang`. Je enumerovateľná. |
+| `cause` | `unknown` | Príčina odovzdaná cez `ErrorOptions`. Štandardná vlastnosť `Error`. |
+
+### Konštruktor [#constructor]
+
+Ak `TMeta` nezahŕňa `undefined`, `meta` je povinné.
+
+```ts
+new MyError(meta, message, options?)
+```
+
+Ak je `TMeta` typu `undefined`, možno `meta` vynechať.
+
+```ts
+new MyError(message, options?)
+new MyError(meta, message, options?)
+```
+
+| Parameter | Typ | Popis |
+| --------- | --- | ----- |
+| `meta` | `TMeta` | Sprievodné informácie používané na generovanie správy. |
+| `message` | `string \| MessageFactory<TMeta>` | Predvolená správa pre jazyky bez registrácie. Ak je funkciou, prijíma `meta`. |
+| `options` | `ErrorOptions` | Voľby kompatibilné s druhým argumentom `Error` (napr. `{ cause }`). |
+
+Ak sa do `message` odovzdá iná ako reťazcová hodnota (napr. číslo), prevedie sa pomocou `String(...)` na reťazec. Ak továreň správ vráti prázdny reťazec, aj `message` bude prázdnym reťazcom.
+
+### Poradie vyhodnotenia [#resolution-order]
+
+1. Získa `lang` z `getGlobalConfig()` (ak nie je nastavené, `"en"`)
+2. Spustí funkciu pre danú triedu a jazyk registrovanú pomocou `setErrorMessage` s `meta`
+3. Ak nie je registrovaná, použije predvolenú správu z konštruktora (reťazec alebo výsledok vyhodnotenia funkcie; po prvom vyhodnotení sa ukladá do vyrovnávacej pamäte)
+4. Ak je `static prefix`, pripojí ho na začiatok
+
+:::note
+Zhoda registrácie je striktná rovnosť `this.constructor`. Registrácia pre rodičovskú triedu sa na potomkov nededí. Registrujte pre každú potrebnú triedu zvlášť.
+:::
+
+## `setErrorMessage` [#set-error-message]
+
+Registruje funkciu na tvorbu správy pre jednotlivé jazyky.
+
+```ts
+import { setErrorMessage } from "i18n-error-base";
+
+setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
+```
+
+| Parameter | Typ | Popis |
+| --------- | --- | ----- |
+| `reference` | `I18nErrorBaseConstructor` | Trieda dediaca z `I18nErrorBase`. Triedy, ktoré nededia, spôsobia typovú chybu. |
+| `message` | `string \| (meta) => string` | Správa na registráciu. Typ `meta` sa odvodí z `meta` cieľovej triedy. |
+| `lang` | `string \| Iterable<string>` | Cieľový jazyk. Jednotlivý kód alebo iterovateľný objekt kódov (napr. pole). |
+
+Reťazec sa interne prevedie na funkciu a uloží. Opätovná registrácia rovnakej triedy a jazyka pôvodnú hodnotu prepíše. Úložiskom je `WeakMap` v `globalThis.i18n_error_base__message_map`, kde kľúčom je trieda a hodnotou `Map` od jazyka k funkcii.
+
+## Typy [#types]
+
+### `ErrorMeta` [#error-meta]
+
+```ts
+type ErrorMeta = {
+  readonly [prop: string]: unknown;
+};
+```
+
+Predvolené obmedzenie pre `TMeta`. Predstavuje objekt len na čítanie s ľubovoľnými vlastnosťami.
+
+### `ErrorOptions` [#error-options]
+
+```ts
+type ErrorOptions =
+  ConstructorParameters<typeof Error> extends [
+    message?: unknown,
+    options?: (infer TOptions) | undefined,
+  ]
+    ? TOptions
+    : { readonly cause?: unknown };
+```
+
+Typ odvodený z druhého argumentu konštruktora `Error` v danom behovom prostredí. Možno odovzdať voľby obsahujúce `cause`. Druhá vetva je fallback pre staršie prostredia.
+
+### `MessageFactory<TMeta>` [#message-factory]
+
+```ts
+interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
+  (meta: TMeta): string;
+}
+```
+
+Funkcia generujúca správu z `meta`. Možno ju použiť tak pre predvolenú správu konštruktora, ako aj pre registrovanú hodnotu `setErrorMessage`.
+
+### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
+
+Typ predstavujúci preťaženie argumentov konštruktora.
+
+```ts
+type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
+  [TMeta] extends [undefined]
+    ?
+        | [message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+        | [meta: undefined, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+    : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
+```
+
+Len ak je `TMeta` typu `undefined`, je povolená skrátená forma bez `meta`.
+
+### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
+
+```ts
+interface I18nErrorBaseConstructor {
+  new (...args: any): I18nErrorBase;
+}
+```
+
+Typ prvého argumentu `setErrorMessage`. Vnútorný symbol bráni na typovej úrovni prímesi tried, ktoré nededia z `I18nErrorBase`.
+
+## Poznámky [#notes]
+
+- Predvolená hodnota `lang` používaná na vyhodnotenie `message` je `"en"`. Explicitne prepínajte pomocou `setGlobalConfig({ lang })`
+- Kódy jazykov sa nenormalizujú ani neexistuje fallback reťazec (napr. ústup z `en-US` na `en`). Neregistrované jazyky vždy použijú predvolenú správu
+- Registračné dáta sa uchovávajú v `WeakMap` celého procesu. Ak ich chcete v testoch izolovať, môžete ich zahodiť pomocou `globalThis.i18n_error_base__message_map = undefined`

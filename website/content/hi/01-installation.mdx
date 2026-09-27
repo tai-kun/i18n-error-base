@@ -1,0 +1,49 @@
+---
+title: इंस्टॉलेशन
+description: i18n-error-base की इंस्टॉलेशन विधि और संचालन आवश्यकताएँ।
+---
+
+## आवश्यकताएँ [#requirements]
+
+- Node.js आदि ES मॉड्यूल संभाल सकने वाला निष्पादन वातावरण
+- peer निर्भरता के रूप में `valibot@^1.0.0` आवश्यक है
+
+`I18nErrorBase` आंतरिक रूप से Valibot के `getGlobalConfig()` को देखकर वर्तमान `lang` प्राप्त करता है। Valibot का उपयोग न करने वाले प्रोजेक्ट में भी, केवल भाषा बदलने के लिए `setGlobalConfig({ lang })` को कॉल करने पर कार्य करता है।
+
+## इंस्टॉलेशन [#installation]
+
+```package-install
+npm i i18n-error-base
+```
+
+Valibot इंस्टॉल न होने पर साथ में जोड़ें।
+
+```package-install
+npm i valibot
+```
+
+:::warning[peer निर्भरता पर ध्यान दें]
+`i18n-error-base` `valibot` को बंडल नहीं करता। होस्ट पक्ष पर `valibot@^1.0.0` तैयार न होने पर, आयात के समय समाधान त्रुटि होती है।
+:::
+
+## आयात [#import]
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
+```
+
+डिफ़ॉल्ट एक्सपोर्ट भी उपलब्ध है।
+
+```ts
+import I18nErrorBase from "i18n-error-base";
+import setErrorMessage from "i18n-error-base";
+```
+
+:::note
+पैकेज ESM (`"type": "module"`) में वितरित होता है और इसका कोई दुष्प्रभाव नहीं है (`"sideEffects": false`)। प्रकार परिभाषाएँ `dist/src/*.d.ts` से हल होती हैं।
+:::
+
+## अगले चरण [#next-steps]
+
+[उपयोग](/hi/usage) में त्रुटि वर्ग की परिभाषा और भाषा परिवर्तन की बुनियादी बातें देखें।

@@ -1,0 +1,49 @@
+---
+title: Инсталиране
+description: Как да инсталирате i18n-error-base и неговите изисквания.
+---
+
+## Изисквания [#requirements]
+
+- Среда за изпълнение, която поддържа ES модули, например Node.js
+- Като peer зависимост се изисква `valibot@^1.0.0`
+
+`I18nErrorBase` вътрешно чете `getGlobalConfig()` на Valibot, за да получи текущия `lang`. Дори в проекти, които иначе не използват Valibot, е достатъчно да извикате `setGlobalConfig({ lang })` само за превключване на езиците, за да работи.
+
+## Инсталиране [#installation]
+
+```package-install
+npm i i18n-error-base
+```
+
+Ако Valibot все още не е инсталиран, добавете и него.
+
+```package-install
+npm i valibot
+```
+
+:::warning[Внимание за peer зависимостта]
+`i18n-error-base` не включва `valibot` в себе си. Ако хост проектът не предоставя `valibot@^1.0.0`, импортът няма да се разреши.
+:::
+
+## Импорт [#import]
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
+```
+
+Предоставен е и експорт по подразбиране.
+
+```ts
+import I18nErrorBase from "i18n-error-base";
+import setErrorMessage from "i18n-error-base";
+```
+
+:::note
+Пакетът се разпространява като ESM (`"type": "module"`) без странични ефекти (`"sideEffects": false`). Типовите дефиниции се разрешават от `dist/src/*.d.ts`.
+:::
+
+## Следващи стъпки [#next-steps]
+
+Вижте [Употреба](/bg/usage) за това как да дефинирате клас за грешки и основите на превключването на езици.

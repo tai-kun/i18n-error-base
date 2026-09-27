@@ -1,0 +1,182 @@
+---
+title: การใช้งาน
+description: การดำเนินการพื้นฐานเกี่ยวกับการกำหนดคลาสข้อผิดพลาด การลงทะเบียนข้อความ การสลับภาษา prefix และ fallback
+---
+
+## ขั้นตอนพื้นฐาน [#basic-flow]
+
+<Steps>
+  <Step title="กำหนดคลาสข้อผิดพลาด">
+    สืบทอด `I18nErrorBase<TMeta>` และกำหนดข้อมูลที่ต้องการใช้สร้างข้อความไว้เป็น `TMeta`
+  </Step>
+  <Step title="ลงทะเบียนข้อความแยกตามภาษา">
+    ลงทะเบียนข้อความที่สอดคล้องกับคลาสและภาษาด้วย `setErrorMessage`
+  </Step>
+  <Step title="สลับภาษาแล้วอ่าน message">
+    สลับด้วย `setGlobalConfig({ lang })` ของ Valibot แล้วเข้าถึง `error.message`
+  </Step>
+</Steps>
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`);
+  }
+}
+
+setErrorMessage(
+  BusinessRuleError,
+  ({ code, limit }) => `コード: ${code}、制限: ${limit}`,
+  "ja",
+);
+
+const error = new BusinessRuleError({ code: "ERR", limit: 50 });
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // コード: ERR、制限: 50
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Code: ERR, Limit: 50
+```
+
+## การกำหนดคลาสข้อผิดพลาด [#define-error-class]
+
+`TMeta` คือชนิดของข้อมูลประกอบที่ใช้สร้างข้อความ โดยจะถูกเก็บไว้เป็น `error.meta` และส่งต่อให้ฟังก์ชันของ `setErrorMessage`
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+console.log(error.meta); // { resource: "user" }
+```
+
+อาร์กิวเมนต์ตัวที่ 2 ของคอนสตรักเตอร์คือสตริงหรือฟังก์ชัน `(meta) => string` ส่วนอาร์กิวเมนต์ตัวที่ 3 สามารถส่งออปชันเช่น `{ cause }` เดียวกับ `Error` ได้
+
+```ts
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+const cause = new Error("original");
+const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
+console.log(error.cause === cause); // true
+```
+
+หากตั้ง `TMeta` เป็น `undefined` จะสามารถละ `meta` ได้
+
+```ts
+class NoMetaError extends I18nErrorBase<undefined> {}
+
+const a = new NoMetaError("no meta");
+const b = new NoMetaError(undefined, "no meta");
+console.log(a.meta); // undefined
+```
+
+:::note
+ไม่ได้ออกแบบให้ `new` `I18nErrorBase` โดยตรง โปรดสร้างคลาสคอนกรีตที่สืบทอดก่อนใช้งานเสมอ เนื่องจากปลายทางการลงทะเบียนข้อความจะแยกตามคอนสตรักเตอร์ (`this.constructor`) ข้อความที่ลงทะเบียนในคลาสแม่จะไม่ถูกสืบทอดไปยังคลาสลูก
+:::
+
+## การลงทะเบียนข้อความ [#register-message]
+
+`setErrorMessage` ลงทะเบียนฟังก์ชันสร้างข้อความสำหรับคลาสและภาษา
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
+setErrorMessage(TestError, "something went wrong", "en");
+```
+
+หากส่งสตริงจะถูกแปลงเป็น `() => text` ภายใน ภาษาสามารถระบุเป็นอาร์เรย์ของสตริงได้
+
+```ts
+const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
+setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
+```
+
+การลงทะเบียนซ้ำในคลาสและภาษาเดิมจะเขียนทับค่าเดิม เนื้อหาที่ลงทะเบียนจะไม่เกี่ยวกับการตัดสิน `instanceof` และจะใช้เฉพาะเมื่อคอนสตรักเตอร์ตอนลงทะเบียนกับตอนอ้างอิงตรงกันเท่านั้น
+
+:::warning[ข้อควรระวังการเข้าถึงก่อนลงทะเบียน]
+ข้อความเริ่มต้นในรูปแบบฟังก์ชันจะถูกประเมินและแคชเมื่อเข้าถึงครั้งแรก หากอ่าน `message` ในภาษาที่ยังไม่ได้ลงทะเบียนก่อนเรียก `setErrorMessage` ค่าเริ่มต้นนั้นจะถูกตรึงไว้ โดยหลักแล้วโปรดลงทะเบียนข้อความแยกตามภาษาก่อนสร้างอินสแตนซ์
+:::
+
+## การสลับภาษา [#switch-language]
+
+สลับภาษาด้วยการตั้งค่าโกลบอลของ Valibot โดย `message` จะอ้างอิง `lang` ปัจจุบันทุกครั้งที่มีการเข้าถึง
+
+```ts
+import { setGlobalConfig } from "valibot";
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // 日本語の登録メッセージ
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
+```
+
+ค่าเริ่มต้นของ `lang` เมื่อยังไม่ได้ตั้งค่าคือ `"en"` หากขอภาษาที่ยังไม่ได้ลงทะเบียน จะ fallback ไปใช้ข้อความเริ่มต้นที่ส่งให้คอนสตรักเตอร์
+
+```ts
+setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
+
+setGlobalConfig({ lang: "fr" });
+console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
+```
+
+## การใส่คำนำหน้า [#prefix]
+
+หากตั้งค่า `static prefix` ในคลาส จะเชื่อมต่อไว้ที่ด้านหน้าของข้อความที่ resolve แล้ว มีผลทั้งข้อความที่แปลแล้วและข้อความเริ่มต้น
+
+```ts
+class PrefixedError extends I18nErrorBase<{ code: string }> {
+  static {
+    this.prefix = "[ERROR] ";
+  }
+}
+
+setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // "[ERROR] code is ERR"
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // "[ERROR] fallback"
+```
+
+หากไม่ตั้งค่าจะคืนค่าเดิมโดยไม่มีคำนำหน้า
+
+## พฤติกรรมในฐานะ Error [#error-behavior]
+
+- ทั้ง `error instanceof Error`, `instanceof I18nErrorBase` และ `instanceof คลาสคอนกรีต` ล้วนเป็น `true`
+- `message` สามารถ enumerate ได้ (รวมอยู่ใน `Object.keys(error)`)
+- `String(error)` / `error.toString()` จะมีข้อความที่ resolve แล้ว (เช่น `"Error: ..."`)
+- `cause` จะถูกเก็บไว้ด้วย `new TestError(meta, message, { cause })` ในฐานะ polyfill สำหรับสภาพแวดล้อมรันไทม์เก่า มีการประมวลผลมอบหมาย `options.cause` เมื่อไม่รองรับ `cause`
+
+## รูปแบบที่ใช้บ่อย [#common-patterns]
+
+### ตรึงข้อความเริ่มต้นในคอนสตรักเตอร์ [#fix-default-message-in-constructor]
+
+```ts
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }, options?: ErrorOptions) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`, options);
+  }
+}
+```
+
+ฝั่งผู้เรียกเพียงใส่ใจแค่ `meta` ก็พอ และหลีกเลี่ยงข้อความเริ่มต้น (ในที่นี้คือภาษาอังกฤษ) ที่ซ้ำกันได้
+
+### ลงทะเบียนหลายภาษาพร้อมกัน [#register-multiple-languages]
+
+```ts
+setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
+setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
+```
+
+ไม่มีการ normalize รหัสภาษา `"en"` กับ `"en-US"` จะถือเป็นคีย์แยกกัน ดังนั้นโปรดลงทะเบียนรหัสที่ต้องการอย่างชัดเจน

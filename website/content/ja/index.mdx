@@ -25,7 +25,7 @@ console.log(error.message); // Resource not found: user
 
 `message` へのアクセス時にその時点の `lang` を参照するため、インスタンスを作り直さなくても言語を切り替えられます。登録のない言語ではコンストラクターに渡した既定メッセージにフォールバックします。
 
-## 特徴
+## 特徴 [#features]
 
 - Valibot の `getGlobalConfig()` / `setGlobalConfig({ lang })` と連動し、`message` を動的に解決します
 - 言語ごとのメッセージは `setErrorMessage` で後から登録します。`meta` を受け取る関数も登録できます
@@ -35,7 +35,7 @@ console.log(error.message); // Resource not found: user
 - `Error` を継承しているため `instanceof Error`、`cause`、`stack` はそのまま使えます
 - メッセージの保存先は `WeakMap` のため、不要になったクラスはガベージコレクトされます
 
-## 構成
+## 構成 [#structure]
 
 <CardGroup cols={2}>
   <Card title="インストール" href="/ja/installation" icon="download">
@@ -49,7 +49,7 @@ console.log(error.message); // Resource not found: user
   </Card>
 </CardGroup>
 
-## 仕組み
+## 仕組み [#how-it-works]
 
 `I18nErrorBase` のコンストラクターは `message` をゲッターとして定義します。アクセスのたびに次の順序で解決します。
 
@@ -62,6 +62,6 @@ console.log(error.message); // Resource not found: user
 既定メッセージの関数形式は初回アクセス時に評価され、以後はキャッシュされます。登録済み言語のメッセージはアクセスのたびに `meta` から再生成されるため、言語切り替えは即座に反映されます。
 :::
 
-## 次のステップ
+## 次のステップs [#next-steps]
 
 まずは[インストール](/ja/installation)から始め、[使い方](/ja/usage)で一連の流れを確認してください。型や引数の詳細は [API リファレンス](/ja/api)にまとめています。

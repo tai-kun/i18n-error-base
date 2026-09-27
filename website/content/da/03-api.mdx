@@ -1,0 +1,153 @@
+---
+title: API-reference
+description: Specifikationer for I18nErrorBase, setErrorMessage og relaterede typer.
+---
+
+## `I18nErrorBase` [#i18n-error-base]
+
+En basisklasse til nedarvning af `Error`. Den omdefinerer `message` som en getter og løser den dynamisk ud fra Valibots `lang`.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class MyError extends I18nErrorBase<{ code: string }> {}
+```
+
+### Typeparametre [#type-params]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Typen for de supplerende oplysninger, der beholdes som `meta`. Angiv `undefined`, når de ikke bruges. |
+
+### Statiske egenskaber [#static-props]
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `prefix?` | `string` | `undefined` | Når den er angivet, sættes den foran den løste meddelelse. |
+
+### Instansegenskaber [#instance-props]
+
+| Prop | Type | Description |
+| ---- | ---- | ----------- |
+| `meta` | `TMeta` | De supplerende oplysninger fra konstruktøren. Kan både læses og skrives. |
+| `message` | `string` | Meddelelsen løst for den aktuelle `lang`. Kan optælles. |
+| `cause` | `unknown` | Årsagen sendt via `ErrorOptions`. En standard `Error`-egenskab. |
+
+### Konstruktør [#constructor]
+
+Når `TMeta` ikke omfatter `undefined`, er `meta` påkrævet.
+
+```ts
+new MyError(meta, message, options?)
+```
+
+Når `TMeta` er `undefined`, kan `meta` udelades.
+
+```ts
+new MyError(message, options?)
+new MyError(meta, message, options?)
+```
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `meta` | `TMeta` | De supplerende oplysninger, der bruges til meddelelsesgenerering. |
+| `message` | `string \| MessageFactory<TMeta>` | Standardmeddelelsen for sprog uden registrering. Når det er en funktion, modtager den `meta`. |
+| `options` | `ErrorOptions` | Indstillinger kompatible med det andet argument til `Error` (f.eks. `{ cause }`). |
+
+Hvis der sendes en ikke-streng (f.eks. et tal) som `message`, konverteres den til en streng med `String(...)`. Hvis en meddelelsesfunktion returnerer en tom streng, er `message` også en tom streng.
+
+### Opløsningsrækkefølge [#resolution-order]
+
+1. Henter `lang` fra `getGlobalConfig()` (`"en"`, når den ikke er angivet)
+2. Udfører funktionen registreret med `setErrorMessage` for den pågældende klasse og det pågældende sprog med `meta`
+3. Hvis uregistreret, bruges konstruktørens standardmeddelelse (en streng eller det evaluerede resultat af en funktion; caches efter første evaluering)
+4. Hvis `static prefix` er angivet, sættes det foran
+
+:::note
+Registreringer matches ved fuldstændig lighed på `this.constructor`. Registreringer på en forældreklasse nedarves ikke af underklasser. Registrer hver klasse, du har brug for.
+:::
+
+## `setErrorMessage` [#set-error-message]
+
+Registrerer en meddelelsesfunktion pr. sprog.
+
+```ts
+import { setErrorMessage } from "i18n-error-base";
+
+setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
+```
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `reference` | `I18nErrorBaseConstructor` | En klasse, der nedarver `I18nErrorBase`. Klasser uden nedarvning giver en typefejl. |
+| `message` | `string \| (meta) => string` | Meddelelsen, der skal registreres. Typen for `meta` udledes fra målklassens `meta`. |
+| `lang` | `string \| Iterable<string>` | Målsproget. En enkelt kode eller et itererbart objekt med koder (f.eks. en matrix). |
+
+Strenge konverteres internt til funktioner, før de gemmes. Genregistrering af samme klasse og sprog overskriver den tidligere post. Data gemmes i `WeakMap` på `globalThis.i18n_error_base__message_map` med klassen som nøgle og en `Map` fra sprog til funktioner som værdi.
+
+## Typer [#types]
+
+### `ErrorMeta` [#error-meta]
+
+```ts
+type ErrorMeta = {
+  readonly [prop: string]: unknown;
+};
+```
+
+Standardbegrænsningen for `TMeta`. Repræsenterer et skrivebeskyttet objekt med vilkårlige egenskaber.
+
+### `ErrorOptions` [#error-options]
+
+```ts
+type ErrorOptions =
+  ConstructorParameters<typeof Error> extends [
+    message?: unknown,
+    options?: (infer TOptions) | undefined,
+  ]
+    ? TOptions
+    : { readonly cause?: unknown };
+```
+
+En type udledt fra det andet argument til kørselsmiljøets `Error`-konstruktør. Du kan sende indstillinger med `cause`. Den sidstnævnte gren er et fallback til ældre miljøer.
+
+### `MessageFactory<TMeta>` [#message-factory]
+
+```ts
+interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
+  (meta: TMeta): string;
+}
+```
+
+En funktion, der genererer en meddelelse ud fra `meta`. Bruges både til konstruktørens standardmeddelelse og til værdier registreret med `setErrorMessage`.
+
+### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
+
+En type, der repræsenterer konstruktørargumenternes overloads.
+
+```ts
+type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
+  [TMeta] extends [undefined]
+    ?
+        | [message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+        | [meta: undefined, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined]
+    : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
+```
+
+Den `meta`-løse form er kun tilladt, når `TMeta` er `undefined`.
+
+### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
+
+```ts
+interface I18nErrorBaseConstructor {
+  new (...args: any): I18nErrorBase;
+}
+```
+
+Typen for det første argument til `setErrorMessage`. Et internt identifikationssymbol forhindrer på typeniveau, at klasser uden nedarvning af `I18nErrorBase` sniger sig ind.
+
+## Noter [#notes]
+
+- Standardværdien for `lang` til løsning af `message` er `"en"`. Skift den eksplicit med `setGlobalConfig({ lang })`
+- Der er ingen normalisering af sprogkoder og ingen fallback-kæde (f.eks. fra `en-US` til `en`). Uregistrerede sprog giver altid standardmeddelelsen
+- Registreringsdata beholdes i et procesdækkende `WeakMap`. Hvis du vil isolere tests, kan du kassere dem med `globalThis.i18n_error_base__message_map = undefined`

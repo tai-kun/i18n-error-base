@@ -1,0 +1,67 @@
+---
+title: i18n-error-base
+description: Valibot की भाषा सेटिंग के साथ त्रुटि संदेश बदलने वाला Error का आधार वर्ग।
+---
+
+Valibot की वैश्विक भाषा सेटिंग (`lang`) के साथ `message` को गतिशील रूप से बदलने वाला, `Error` को विस्तारित करने के लिए आधार वर्ग है।
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+setErrorMessage(NotFoundError, ({ resource }) => `リソースが見つかりません: ${resource}`, "ja");
+setErrorMessage(NotFoundError, ({ resource }) => `Resource not found: ${resource}`, "en");
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // リソースが見つかりません: user
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Resource not found: user
+```
+
+`message` तक पहुँचने पर उस समय के `lang` को देखा जाता है, इसलिए इंस्टेंस दोबारा बनाए बिना भाषा बदली जा सकती है। अपंजीकृत भाषा में कंस्ट्रक्टर को दिए गए डिफ़ॉल्ट संदेश पर फ़ॉलबैक होता है।
+
+## विशेषताएँ [#features]
+
+- Valibot के `getGlobalConfig()` / `setGlobalConfig({ lang })` के साथ जुड़कर, `message` को गतिशील रूप से हल करता है
+- प्रत्येक भाषा के संदेश `setErrorMessage` से बाद में पंजीकृत करते हैं। `meta` प्राप्त करने वाला फ़ंक्शन भी पंजीकृत किया जा सकता है
+- अपंजीकृत भाषा में कंस्ट्रक्टर के डिफ़ॉल्ट संदेश पर फ़ॉलबैक होता है
+- वर्ग-स्तरीय `static prefix` से संदेश की शुरुआत में उपसर्ग जोड़ा जा सकता है
+- `meta` को कंस्ट्रक्टर में रखा जाता है और संदेश निर्माण फ़ंक्शन को दिया जाता है
+- `Error` को विस्तारित करने के कारण `instanceof Error`, `cause`, `stack` वैसे ही उपयोग किए जा सकते हैं
+- संदेशों का भंडारण `WeakMap` में होता है, इसलिए अनावश्यक वर्ग गार्बेज-कलेक्ट हो जाते हैं
+
+## संरचना [#structure]
+
+<CardGroup cols={2}>
+  <Card title="इंस्टॉलेशन" href="/hi/installation" icon="download">
+    पैकेज जोड़ने और Valibot के साथ peer निर्भरता के बारे में।
+  </Card>
+  <Card title="उपयोग" href="/hi/usage" icon="book-open">
+    वर्ग परिभाषा से भाषा परिवर्तन, prefix, फ़ॉलबैक तक की बुनियादी प्रक्रियाएँ।
+  </Card>
+  <Card title="API संदर्भ" href="/hi/api" icon="code">
+    `I18nErrorBase` और `setErrorMessage` तथा संबंधित प्रकारों की विशिष्टता।
+  </Card>
+</CardGroup>
+
+## कार्यप्रणाली [#how-it-works]
+
+`I18nErrorBase` का कंस्ट्रक्टर `message` को गेटर के रूप में परिभाषित करता है। प्रत्येक एक्सेस पर निम्न क्रम में समाधान करता है।
+
+1. `getGlobalConfig()` से `lang` प्राप्त करता है। सेट न होने पर `"en"` होता है
+2. `setErrorMessage` से पंजीकृत `(वर्ग × lang)` फ़ंक्शन मौजूद हो तो `meta` देकर निष्पादित करता है
+3. अन्यथा कंस्ट्रक्टर को दिए गए स्ट्रिंग या फ़ंक्शन के परिणाम (डिफ़ॉल्ट संदेश) को लौटाता है
+4. `static prefix` सेट होने पर शुरुआत में जोड़ता है
+
+:::tip
+डिफ़ॉल्ट संदेश का फ़ंक्शन रूप पहले एक्सेस पर मूल्यांकित होता है और उसके बाद कैश किया जाता है। पंजीकृत भाषाओं के संदेश प्रत्येक एक्सेस पर `meta` से पुनः निर्मित होते हैं, इसलिए भाषा परिवर्तन तुरंत प्रतिबिंबित होता है।
+:::
+
+## अगले चरण [#next-steps]
+
+पहले [इंस्टॉलेशन](/hi/installation) से शुरू करें और [उपयोग](/hi/usage) में पूरी प्रक्रिया देखें। प्रकारों और तर्कों का विवरण [API संदर्भ](/hi/api) में दिया गया है।

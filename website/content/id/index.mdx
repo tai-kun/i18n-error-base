@@ -1,0 +1,67 @@
+---
+title: i18n-error-base
+description: Kelas dasar Error yang mengganti pesan kesalahan seiring dengan pengaturan bahasa Valibot.
+---
+
+Kelas dasar untuk pewarisan `Error` yang mengganti `message` secara dinamis seiring dengan pengaturan bahasa global Valibot (`lang`).
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+setErrorMessage(NotFoundError, ({ resource }) => `リソースが見つかりません: ${resource}`, "ja");
+setErrorMessage(NotFoundError, ({ resource }) => `Resource not found: ${resource}`, "en");
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // リソースが見つかりません: user
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Resource not found: user
+```
+
+Karena `lang` pada saat itu dirujuk setiap kali `message` diakses, bahasa dapat diganti tanpa membuat ulang instans. Untuk bahasa yang tidak terdaftar, akan fallback ke pesan default yang diberikan ke konstruktor.
+
+## Fitur [#features]
+
+- Berhubungan dengan `getGlobalConfig()` / `setGlobalConfig({ lang })` Valibot dan menyelesaikan `message` secara dinamis
+- Pesan tiap bahasa didaftarkan belakangan dengan `setErrorMessage`. Fungsi yang menerima `meta` juga dapat didaftarkan
+- Untuk bahasa yang tidak terdaftar, fallback ke pesan default konstruktor
+- Awalan dapat ditambahkan di awal pesan melalui `static prefix` tingkat kelas
+- `meta` disimpan di konstruktor dan diteruskan ke fungsi pembuat pesan
+- Karena mewarisi `Error`, `instanceof Error`, `cause`, dan `stack` dapat digunakan apa adanya
+- Tempat penyimpanan pesan adalah `WeakMap`, sehingga kelas yang tidak lagi dibutuhkan akan di-garbage collect
+
+## Struktur [#structure]
+
+<CardGroup cols={2}>
+  <Card title="Instalasi" href="/id/installation" icon="download">
+    Penambahan paket dan dependensi peer dengan Valibot.
+  </Card>
+  <Card title="Penggunaan" href="/id/usage" icon="book-open">
+    Operasi dasar mulai dari definisi kelas hingga pengalihan bahasa, prefix, dan fallback.
+  </Card>
+  <Card title="Referensi API" href="/id/api" icon="code">
+    Spesifikasi `I18nErrorBase` dan `setErrorMessage` beserta tipe terkait.
+  </Card>
+</CardGroup>
+
+## Cara kerja [#how-it-works]
+
+Konstruktor `I18nErrorBase` mendefinisikan `message` sebagai getter. Setiap kali diakses, diselesaikan dengan urutan berikut.
+
+1. Mendapatkan `lang` dari `getGlobalConfig()`. Jika belum diatur, nilainya adalah `"en"`
+2. Jika ada fungsi `(kelas × lang)` yang didaftarkan dengan `setErrorMessage`, jalankan dengan menyertakan `meta`
+3. Jika tidak ada, kembalikan pesan default yang diberikan ke konstruktor (string atau hasil fungsi)
+4. Jika `static prefix` diatur, gabungkan di awal
+
+:::tip
+Fungsi bentuk pesan default dievaluasi pada akses pertama dan di-cache setelahnya. Pesan bahasa yang terdaftar dibuat ulang dari `meta` setiap kali diakses, sehingga pengalihan bahasa langsung tercermin.
+:::
+
+## Langkah selanjutnya [#next-steps]
+
+Mulailah dari [Instalasi](/id/installation), lalu periksa alur lengkapnya di [Penggunaan](/id/usage). Detail tipe dan argumen dirangkum di [Referensi API](/id/api).

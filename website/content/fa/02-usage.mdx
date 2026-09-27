@@ -1,0 +1,182 @@
+---
+title: طرز استفاده
+description: عملیات پایهٔ تعریف کلاس خطا، ثبت پیام، جابه‌جایی زبان، prefix و fallback.
+---
+
+## روند پایه [#basic-flow]
+
+<Steps>
+  <Step title="تعریف کلاس خطا">
+    از `I18nErrorBase<TMeta>` ارث ببرید و اطلاعاتی را که می‌خواهید در ساخت پیام استفاده کنید به‌عنوان `TMeta` تعریف کنید.
+  </Step>
+  <Step title="ثبت پیام هر زبان">
+    با `setErrorMessage` پیام متناظر با کلاس و زبان را ثبت کنید.
+  </Step>
+  <Step title="جابه‌جایی زبان و خواندن message">
+    با `setGlobalConfig({ lang })` در Valibot جابه‌جا کنید و به `error.message` دسترسی پیدا کنید.
+  </Step>
+</Steps>
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`);
+  }
+}
+
+setErrorMessage(
+  BusinessRuleError,
+  ({ code, limit }) => `コード: ${code}、制限: ${limit}`,
+  "ja",
+);
+
+const error = new BusinessRuleError({ code: "ERR", limit: 50 });
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // コード: ERR、制限: 50
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Code: ERR, Limit: 50
+```
+
+## تعریف کلاس خطا [#define-error-class]
+
+`TMeta` نوع اطلاعات همراهی است که در ساخت پیام استفاده می‌شود. به‌عنوان `error.meta` نگه داشته می‌شود و به تابع `setErrorMessage` هم سپرده می‌شود.
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+console.log(error.meta); // { resource: "user" }
+```
+
+آرگومان دوم سازنده رشته یا تابعی به شکل `(meta) => string` است. به‌عنوان آرگومان سوم می‌توان مثل `Error` گزینه‌هایی مانند `{ cause }` را سپرد.
+
+```ts
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+const cause = new Error("original");
+const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
+console.log(error.cause === cause); // true
+```
+
+اگر `TMeta` را `undefined` کنید می‌توان `meta` را حذف کرد.
+
+```ts
+class NoMetaError extends I18nErrorBase<undefined> {}
+
+const a = new NoMetaError("no meta");
+const b = new NoMetaError(undefined, "no meta");
+console.log(a.meta); // undefined
+```
+
+:::note
+قرار نیست خود `I18nErrorBase` را مستقیم با `new` بسازید. حتماً کلاس عینیِ به‌ارث‌رسیده بسازید و از آن استفاده کنید. چون محل ثبت پیام به‌ازای هر سازنده (`this.constructor`) جدا می‌شود، پیامی که روی کلاس والد ثبت شده به کلاس فرزند به ارث نمی‌رسد.
+:::
+
+## ثبت پیام [#register-message]
+
+`setErrorMessage` تابع سازندهٔ پیام را برای یک کلاس و یک زبان ثبت می‌کند.
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
+setErrorMessage(TestError, "something went wrong", "en");
+```
+
+اگر رشته بسپارید، در داخل به `() => text` تبدیل می‌شود. زبان را می‌توان به‌صورت آرایه‌ای از رشته‌ها هم مشخص کرد.
+
+```ts
+const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
+setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
+```
+
+ثبت دوباره روی همان کلاس و زبان بازنویسی می‌شود. محتوای ثبت‌شده مستقل از قضاوت `instanceof` است و فقط وقتی به کار می‌رود که سازندهٔ زمان ثبت با سازندهٔ زمان رجوع یکسان باشد.
+
+:::warning[توجه به دسترسی پیش از ثبت]
+شکل تابعی پیام پیش‌فرض در نخستین دسترسی ارزیابی و کش می‌شود. اگر پیش از `setErrorMessage` و با زبانی ثبت‌نشده `message` را بخوانید، همان مقدار پیش‌فرض تثبیت می‌شود. پیام‌های هر زبان را قاعدتاً پیش از ساخت نمونه ثبت کنید.
+:::
+
+## جابه‌جایی زبان [#switch-language]
+
+زبان با تنظیم سراسری Valibot جابه‌جا می‌شود. `message` در هر دسترسی به `lang` جاری رجوع می‌کند.
+
+```ts
+import { setGlobalConfig } from "valibot";
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // 日本語の登録メッセージ
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
+```
+
+مقدار پیش‌فرض `lang` وقتی تنظیم نشده باشد `"en"` است. اگر زبانی ثبت‌نشده درخواست شود، به پیام پیش‌فرض ارسال‌شده به سازنده برمی‌گردد (fallback).
+
+```ts
+setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
+
+setGlobalConfig({ lang: "fr" });
+console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
+```
+
+## افزودن پیشوند [#prefix]
+
+اگر روی کلاس `static prefix` تنظیم کنید، به ابتدای پیام حل‌شده چسبانده می‌شود. هم روی پیام ترجمه‌شده و هم روی پیام پیش‌فرض اعمال می‌شود.
+
+```ts
+class PrefixedError extends I18nErrorBase<{ code: string }> {
+  static {
+    this.prefix = "[ERROR] ";
+  }
+}
+
+setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // "[ERROR] code is ERR"
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // "[ERROR] fallback"
+```
+
+اگر تنظیم نشود، بدون پیشوند همان‌طور که هست برمی‌گردد.
+
+## رفتار به‌عنوان Error [#error-behavior]
+
+- هر سهٔ `error instanceof Error` و `instanceof I18nErrorBase` و `instanceof` کلاس عینی `true` است
+- `message` قابل‌شمارش (enumerable) است (در `Object.keys(error)` می‌آید)
+- `String(error)` / `error.toString()` پیام حل‌شده را در بر دارد (مثلاً `"Error: ..."`)
+- `cause` با `new TestError(meta, message, { cause })` نگه داشته می‌شود. به‌عنوان پالی‌فیل برای محیط‌های اجرایی قدیمی، پردازشی گنجانده شده که وقتی `cause` پشتیبانی نشود `options.cause` را جایگذاری می‌کند
+
+## الگوهای رایج [#common-patterns]
+
+### تثبیت پیام پیش‌فرض در سازنده [#fix-default-message-in-constructor]
+
+```ts
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }, options?: ErrorOptions) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`, options);
+  }
+}
+```
+
+سمت فراخوان فقط باید به `meta` توجه کند و از تکرار متن پیش‌فرض (اینجا انگلیسی) جلوگیری می‌شود.
+
+### ثبت یکجای چند زبان [#register-multiple-languages]
+
+```ts
+setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
+setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
+```
+
+کدهای زبان نرمال‌سازی نمی‌شوند. `"en"` و `"en-US"` کلیدهای جدا شمرده می‌شوند، پس کدهای لازم را صریح ثبت کنید.

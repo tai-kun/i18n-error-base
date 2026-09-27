@@ -1,0 +1,182 @@
+---
+title: 使用方法
+description: 定义错误类、注册消息、切换语言、前缀、回退的基本操作。
+---
+
+## 基本流程 [#basic-flow]
+
+<Steps>
+  <Step title="定义错误类">
+    继承 `I18nErrorBase<TMeta>`，并将用于消息生成的信息定义为 `TMeta`。
+  </Step>
+  <Step title="注册各语言的消息">
+    使用 `setErrorMessage` 注册类与语言对应的消息。
+  </Step>
+  <Step title="切换语言并读取 message">
+    通过 Valibot 的 `setGlobalConfig({ lang })` 切换语言，并访问 `error.message`。
+  </Step>
+</Steps>
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`);
+  }
+}
+
+setErrorMessage(
+  BusinessRuleError,
+  ({ code, limit }) => `コード: ${code}、制限: ${limit}`,
+  "ja",
+);
+
+const error = new BusinessRuleError({ code: "ERR", limit: 50 });
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // コード: ERR、制限: 50
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Code: ERR, Limit: 50
+```
+
+## 定义错误类 [#define-error-class]
+
+`TMeta` 是用于消息生成的附带信息的类型。它会被保留为 `error.meta`，并传递给 `setErrorMessage` 的函数。
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+console.log(error.meta); // { resource: "user" }
+```
+
+构造函数的第二个参数是字符串或 `(meta) => string` 函数。第三个参数可传入与 `Error` 相同的 `{ cause }` 等选项。
+
+```ts
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+const cause = new Error("original");
+const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
+console.log(error.cause === cause); // true
+```
+
+将 `TMeta` 设为 `undefined` 时可以省略 `meta`。
+
+```ts
+class NoMetaError extends I18nErrorBase<undefined> {}
+
+const a = new NoMetaError("no meta");
+const b = new NoMetaError(undefined, "no meta");
+console.log(a.meta); // undefined
+```
+
+:::note
+不建议直接对 `I18nErrorBase` 本身使用 `new`。请务必继承并创建具体类后再使用。由于消息的注册目标按构造函数（`this.constructor`）区分，因此注册到父类的消息不会被子类继承。
+:::
+
+## 注册消息 [#register-message]
+
+`setErrorMessage` 用于注册类与语言对应的消息生成函数。
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
+setErrorMessage(TestError, "something went wrong", "en");
+```
+
+传入字符串时，内部会转换为 `() => text`。语言也可以用字符串数组指定。
+
+```ts
+const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
+setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
+```
+
+对同一类与同一语言重新注册时会覆盖。与 `instanceof` 的判定无关，仅在注册时与引用时的构造函数相同时才会使用注册内容。
+
+:::warning[注意在注册前访问]
+默认消息的函数形式会在首次访问时求值并缓存。如果在调用 `setErrorMessage` 之前就以未注册的语言读取 `message`，该默认值会被固定。原则上请在创建实例之前注册各语言的消息。
+:::
+
+## 切换语言 [#switch-language]
+
+通过 Valibot 的全局配置切换语言。每次访问 `message` 时都会参照当前的 `lang`。
+
+```ts
+import { setGlobalConfig } from "valibot";
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // 日本語の登録メッセージ
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
+```
+
+未设置 `lang` 时的默认值为 `"en"`。请求了未注册的语言时，将回退到传给构造函数的默认消息。
+
+```ts
+setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
+
+setGlobalConfig({ lang: "fr" });
+console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
+```
+
+## 添加前缀 [#prefix]
+
+在类上设置 `static prefix` 后，会拼接到解析后消息的开头。对翻译消息和默认消息都会生效。
+
+```ts
+class PrefixedError extends I18nErrorBase<{ code: string }> {
+  static {
+    this.prefix = "[ERROR] ";
+  }
+}
+
+setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // "[ERROR] code is ERR"
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // "[ERROR] fallback"
+```
+
+未设置时将不带前缀、按原样返回。
+
+## 作为 Error 的行为 [#error-behavior]
+
+- `error instanceof Error`、`instanceof I18nErrorBase`、`instanceof 具体类` 均为 `true`
+- `message` 可枚举（包含在 `Object.keys(error)` 中）
+- `String(error)` / `error.toString()` 包含解析后的消息（例如 `"Error: ..."`）
+- `cause` 通过 `new TestError(meta, message, { cause })` 保留。作为面向旧运行环境的兼容处理，当不支持 `cause` 时会包含代入 `options.cause` 的逻辑
+
+## 常见模式 [#common-patterns]
+
+### 在构造函数中固定默认消息 [#fix-default-message-in-constructor]
+
+```ts
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }, options?: ErrorOptions) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`, options);
+  }
+}
+```
+
+调用方只需关注 `meta`，可避免默认文本（此处为英文）的重复。
+
+### 批量注册多种语言 [#register-multiple-languages]
+
+```ts
+setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
+setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
+```
+
+语言代码不会被规范化。`"en"` 与 `"en-US"` 会被视为不同的键，请明确注册所需的代码。

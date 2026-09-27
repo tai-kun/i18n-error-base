@@ -1,0 +1,67 @@
+---
+title: i18n-error-base
+description: 與 Valibot 語言設定連動切換錯誤訊息的 Error 基底類別。
+---
+
+與 Valibot 全域語言設定（`lang`）連動、動態切換 `message` 的 `Error` 繼承用基底類別。
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+setErrorMessage(NotFoundError, ({ resource }) => `リソースが見つかりません: ${resource}`, "ja");
+setErrorMessage(NotFoundError, ({ resource }) => `Resource not found: ${resource}`, "en");
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // リソースが見つかりません: user
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Resource not found: user
+```
+
+由於每次存取 `message` 時都會參照當下的 `lang`，因此無需重新建立執行個體即可切換語言。對於尚未註冊的語言，將退回至傳遞給建構函式的預設訊息。
+
+## 特色 [#features]
+
+- 與 Valibot 的 `getGlobalConfig()` / `setGlobalConfig({ lang })` 連動，動態解析 `message`
+- 使用 `setErrorMessage` 於事後註冊各語言的訊息，亦可註冊接收 `meta` 的函式
+- 對於尚未註冊的語言，將退回至建構函式的預設訊息
+- 可透過類別層級的 `static prefix` 在訊息開頭加上前綴
+- 在建構函式中保留 `meta`，並將其傳遞給訊息產生函式
+- 由於繼承自 `Error`，`instanceof Error`、`cause`、`stack` 可照常使用
+- 訊息儲存位置為 `WeakMap`，不再需要的類別會被垃圾回收
+
+## 結構 [#structure]
+
+<CardGroup cols={2}>
+  <Card title="安裝" href="/zh-tw/installation" icon="download">
+    關於新增套件以及與 Valibot 對等依賴的說明。
+  </Card>
+  <Card title="使用方式" href="/zh-tw/usage" icon="book-open">
+    從定義類別到語言切換、前綴、退回的基本操作。
+  </Card>
+  <Card title="API 參考" href="/zh-tw/api" icon="code">
+    `I18nErrorBase` 與 `setErrorMessage` 及相關型別的規格。
+  </Card>
+</CardGroup>
+
+## 運作原理 [#how-it-works]
+
+`I18nErrorBase` 的建構函式將 `message` 定義為 getter，每次存取時依下列順序解析。
+
+1. 從 `getGlobalConfig()` 取得 `lang`，未設定時為 `"en"`
+2. 若存在經 `setErrorMessage` 註冊的（類別 × lang）函式，則傳入 `meta` 並執行
+3. 否則回傳傳遞給建構函式的字串或函式結果（預設訊息）
+4. 若設定了 `static prefix`，則串接至開頭
+
+:::tip
+預設訊息的函式形式會在首次存取時求值，之後會被快取。已註冊語言的訊息會在每次存取時根據 `meta` 重新產生，因此語言切換會立即生效。
+:::
+
+## 下一步驟 [#next-steps]
+
+請從[安裝](/zh-tw/installation)開始，在[使用方式](/zh-tw/usage)中確認完整流程。型別與參數詳情彙整於 [API 參考](/zh-tw/api)。

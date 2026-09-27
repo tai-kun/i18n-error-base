@@ -1,0 +1,49 @@
+---
+title: Telepítés
+description: Az i18n-error-base telepítése és működési követelményei.
+---
+
+## Követelmények [#requirements]
+
+- ES modulokat kezelő futtatókörnyezet, például Node.js
+- Peer függőségként `valibot@^1.0.0` szükséges
+
+Az `I18nErrorBase` belsőleg a Valibot `getGlobalConfig()` függvényére hivatkozik az aktuális `lang` lekéréséhez. Olyan projektekben is működik, amelyek nem használják a Valibotot — elegendő a `setGlobalConfig({ lang })` meghívása pusztán a nyelvváltáshoz.
+
+## Telepítés [#installation]
+
+```package-install
+npm i i18n-error-base
+```
+
+Ha a Valibot még nincs telepítve, adja hozzá azt is.
+
+```package-install
+npm i valibot
+```
+
+:::warning[Figyelem a peer függőségre]
+Az `i18n-error-base` nem tartalmazza a `valibot` csomagot. Ha a gazdaoldalon nincs `valibot@^1.0.0`, importáláskor feloldási hiba lép fel.
+:::
+
+## Importálás [#import]
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
+```
+
+Alapértelmezett exportok is rendelkezésre állnak.
+
+```ts
+import I18nErrorBase from "i18n-error-base";
+import setErrorMessage from "i18n-error-base";
+```
+
+:::note
+A csomag ESM formátumban (`"type": "module"`) kerül terjesztésre, mellékhatások nélkül (`"sideEffects": false`). A típusdefiníciók a `dist/src/*.d.ts` fájlokból oldódnak fel.
+:::
+
+## Következő lépések [#next-steps]
+
+A [használat](/hu/usage) oldalon tekintse át a hibaosztályok definiálásának és a nyelvváltásnak az alapjait.
