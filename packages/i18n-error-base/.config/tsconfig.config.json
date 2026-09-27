@@ -1,12 +1,11 @@
 {
   "extends": ["@tsconfig/node24", "@tsconfig/strictest"],
-  "include": ["./pages/**/*"],
+  "include": ["./**/*"],
+  "exclude": ["./global.d.ts"],
   "compilerOptions": {
     "types": ["node"],
-    "lib": ["DOM", "ESNext"],
+    "lib": ["ESNext"],
     "noEmit": true,
-    "allowImportingTsExtensions": true,
-    "target": "es2020",
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "erasableSyntaxOnly": true

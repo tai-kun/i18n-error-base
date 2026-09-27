@@ -1,0 +1,182 @@
+---
+title: 使い方
+description: エラークラスの定義、メッセージ登録、言語切り替え、prefix、フォールバックの基本操作。
+---
+
+## 基本の流れ
+
+<Steps>
+  <Step title="エラークラスを定義する">
+    `I18nErrorBase<TMeta>` を継承し、メッセージ生成に使いたい情報を `TMeta` として定義します。
+  </Step>
+  <Step title="言語ごとのメッセージを登録する">
+    `setErrorMessage` でクラスと言語に対応するメッセージを登録します。
+  </Step>
+  <Step title="言語を切り替えて message を読む">
+    Valibot の `setGlobalConfig({ lang })` で切り替え、`error.message` にアクセスします。
+  </Step>
+</Steps>
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`);
+  }
+}
+
+setErrorMessage(
+  BusinessRuleError,
+  ({ code, limit }) => `コード: ${code}、制限: ${limit}`,
+  "ja",
+);
+
+const error = new BusinessRuleError({ code: "ERR", limit: 50 });
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // コード: ERR、制限: 50
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Code: ERR, Limit: 50
+```
+
+## エラークラスを定義する
+
+`TMeta` はメッセージ生成に使う付随情報の型です。`error.meta` として保持され、`setErrorMessage` の関数にも渡されます。
+
+```ts
+import { I18nErrorBase } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+console.log(error.meta); // { resource: "user" }
+```
+
+コンストラクターの第 2 引数は文字列または `(meta) => string` の関数です。第 3 引数には `Error` と同じ `{ cause }` などのオプションを渡せます。
+
+```ts
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+const cause = new Error("original");
+const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
+console.log(error.cause === cause); // true
+```
+
+`TMeta` を `undefined` にすると `meta` を省略できます。
+
+```ts
+class NoMetaError extends I18nErrorBase<undefined> {}
+
+const a = new NoMetaError("no meta");
+const b = new NoMetaError(undefined, "no meta");
+console.log(a.meta); // undefined
+```
+
+:::note
+`I18nErrorBase` 自体を直接 `new` することは想定していません。必ず継承した具象クラスを作って使ってください。メッセージの登録先はコンストラクター単位（`this.constructor`）で区別されるため、親クラスに登録したメッセージが子クラスに引き継がれることはありません。
+:::
+
+## メッセージを登録する
+
+`setErrorMessage` はクラスと言語に対するメッセージ作成関数を登録します。
+
+```ts
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class TestError extends I18nErrorBase<{ code: string }> {}
+
+setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
+setErrorMessage(TestError, "something went wrong", "en");
+```
+
+文字列を渡すと内部で `() => text` に変換されます。言語は文字列の配列でも指定できます。
+
+```ts
+const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
+setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
+```
+
+同じクラスと言語に再登録すると上書きされます。登録内容は `instanceof` の判定とは無関係に、登録時と参照時のコンストラクターが同一のときにだけ使われます。
+
+:::warning[登録前のアクセスに注意]
+既定メッセージの関数形式は初回アクセス時に評価してキャッシュされます。`setErrorMessage` より前に未登録言語で `message` を読むと、その既定値が固定されます。言語ごとのメッセージは原則としてインスタンス生成より前に登録してください。
+:::
+
+## 言語を切り替える
+
+言語は Valibot のグローバル設定で切り替えます。`message` はアクセスのたびに現在の `lang` を参照します。
+
+```ts
+import { setGlobalConfig } from "valibot";
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // 日本語の登録メッセージ
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
+```
+
+`lang` 未設定時の既定は `"en"` です。登録のない言語を要求した場合は、コンストラクターに渡した既定メッセージにフォールバックします。
+
+```ts
+setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
+
+setGlobalConfig({ lang: "fr" });
+console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
+```
+
+## 接頭辞を付ける
+
+クラスに `static prefix` を設定すると、解決後のメッセージ先頭に連結されます。翻訳メッセージと既定メッセージのどちらにも適用されます。
+
+```ts
+class PrefixedError extends I18nErrorBase<{ code: string }> {
+  static {
+    this.prefix = "[ERROR] ";
+  }
+}
+
+setErrorMessage(PrefixedError, ({ code }) => `code is ${code}`, "ja");
+const error = new PrefixedError({ code: "ERR" }, "fallback");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // "[ERROR] code is ERR"
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // "[ERROR] fallback"
+```
+
+設定しない場合は接頭辞なしでそのまま返ります。
+
+## Error としての振る舞い
+
+- `error instanceof Error`、`instanceof I18nErrorBase`、`instanceof 具象クラス` のいずれも `true` です
+- `message` は列挙可能です（`Object.keys(error)` に含まれます）
+- `String(error)` / `error.toString()` は解決後のメッセージを含みます（例: `"Error: ..."`）
+- `cause` は `new TestError(meta, message, { cause })` で保持されます。古い実行環境向けのポリフィルとして、`cause` 未対応時に `options.cause` を代入する処理が入っています
+
+## よくあるパターン
+
+### 既定メッセージをコンストラクターで固定する
+
+```ts
+class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
+  public constructor(meta: { code: string; limit: number }, options?: ErrorOptions) {
+    super(meta, ({ code, limit }) => `Code: ${code}, Limit: ${limit}`, options);
+  }
+}
+```
+
+呼び出し側は `meta` だけを意識すればよく、既定文（ここでは英語）の重複を避けられます。
+
+### 複数言語をまとめて登録する
+
+```ts
+setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
+setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
+```
+
+言語コードの正規化は行われません。`"en"` と `"en-US"` は別キーとして扱われるため、必要なコードは明示的に登録してください。

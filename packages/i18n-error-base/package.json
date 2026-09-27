@@ -1,0 +1,44 @@
+{
+  "name": "i18n-error-base",
+  "version": "0.0.0",
+  "description": "`i18n-error-base` is a base error class that integrates with Valibot's global language settings, allowing error messages to be dynamically switched based on the locale.",
+  "homepage": "https://github.com/tai-kun/i18n-error-base",
+  "license": "MIT",
+  "author": "tai-kun",
+  "repository": {
+    "url": "https://github.com/tai-kun/i18n-error-base",
+    "directory": "packages/i18n-error-base"
+  },
+  "files": [
+    "dist",
+    "src",
+    "package.json",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project ./.config/tsconfig.build.json"
+  },
+  "devDependencies": {
+    "@tsconfig/node24": "24.0.5",
+    "@tsconfig/strictest": "2.0.8",
+    "@types/node": "24.13.6",
+    "@vitest/browser": "4.1.11",
+    "@vitest/browser-playwright": "4.1.11",
+    "playwright": "1.63.0",
+    "vite": "^8.3.0",
+    "vitest": "4.1.11"
+  },
+  "peerDependencies": {
+    "valibot": "^1.0.0"
+  },
+  "readme": "README.md"
+}

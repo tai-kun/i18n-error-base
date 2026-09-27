@@ -2,22 +2,16 @@
   "name": "i18n-error-base-monorepo",
   "version": "0.0.0",
   "private": true,
-  "homepage": "https://github.com/tai-kun/i18n-error-base",
-  "license": "MIT",
-  "author": "tai-kun",
-  "repository": {
-    "url": "https://github.com/tai-kun/i18n-error-base"
-  },
   "workspaces": [
-    "i18n-error-base",
+    "packages/i18n-error-base",
     "website"
   ],
   "type": "module",
   "devDependencies": {
-    "npm-check-updates": "^22.2.0",
-    "oxfmt": "0.45.0",
-    "oxlint": "1.60.0",
-    "oxlint-tsgolint": "0.21.1",
-    "typescript": "^6.0.3"
+    "npm-check-updates": "23.1.0",
+    "oxfmt": "0.68.0",
+    "oxlint": "1.83.0",
+    "oxlint-tsgolint": "7.0.2002",
+    "typescript": "7.0.2"
   }
 }

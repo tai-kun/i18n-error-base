@@ -1,0 +1,67 @@
+---
+title: i18n-error-base
+description: Valibot の言語設定と連動してエラーメッセージを切り替える、Error の基底クラス。
+---
+
+Valibot のグローバル言語設定（`lang`）と連動して `message` を動的に切り替える、`Error` 継承のための基底クラスです。
+
+```ts
+import { setGlobalConfig } from "valibot";
+import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
+
+class NotFoundError extends I18nErrorBase<{ resource: string }> {}
+
+setErrorMessage(NotFoundError, ({ resource }) => `リソースが見つかりません: ${resource}`, "ja");
+setErrorMessage(NotFoundError, ({ resource }) => `Resource not found: ${resource}`, "en");
+
+const error = new NotFoundError({ resource: "user" }, "fallback message");
+
+setGlobalConfig({ lang: "ja" });
+console.log(error.message); // リソースが見つかりません: user
+
+setGlobalConfig({ lang: "en" });
+console.log(error.message); // Resource not found: user
+```
+
+`message` へのアクセス時にその時点の `lang` を参照するため、インスタンスを作り直さなくても言語を切り替えられます。登録のない言語ではコンストラクターに渡した既定メッセージにフォールバックします。
+
+## 特徴
+
+- Valibot の `getGlobalConfig()` / `setGlobalConfig({ lang })` と連動し、`message` を動的に解決します
+- 言語ごとのメッセージは `setErrorMessage` で後から登録します。`meta` を受け取る関数も登録できます
+- 登録のない言語ではコンストラクターの既定メッセージにフォールバックします
+- クラス単位の `static prefix` でメッセージ先頭に接頭辞を付けられます
+- `meta` をコンストラクターで保持し、メッセージ生成関数に渡します
+- `Error` を継承しているため `instanceof Error`、`cause`、`stack` はそのまま使えます
+- メッセージの保存先は `WeakMap` のため、不要になったクラスはガベージコレクトされます
+
+## 構成
+
+<CardGroup cols={2}>
+  <Card title="インストール" href="/ja/installation" icon="download">
+    パッケージの追加と Valibot との peer 依存について。
+  </Card>
+  <Card title="使い方" href="/ja/usage" icon="book-open">
+    クラスの定義から言語切り替え、prefix、フォールバックまでの基本操作。
+  </Card>
+  <Card title="API リファレンス" href="/ja/api" icon="code">
+    `I18nErrorBase` と `setErrorMessage`、関連する型の仕様。
+  </Card>
+</CardGroup>
+
+## 仕組み
+
+`I18nErrorBase` のコンストラクターは `message` をゲッターとして定義します。アクセスのたびに次の順序で解決します。
+
+1. `getGlobalConfig()` から `lang` を取得します。未設定の場合は `"en"` です
+2. `setErrorMessage` で登録された `(クラス × lang)` の関数があれば `meta` を渡して実行します
+3. なければコンストラクターに渡した文字列または関数の結果（既定メッセージ）を返します
+4. `static prefix` が設定されていれば先頭に連結します
+
+:::tip
+既定メッセージの関数形式は初回アクセス時に評価され、以後はキャッシュされます。登録済み言語のメッセージはアクセスのたびに `meta` から再生成されるため、言語切り替えは即座に反映されます。
+:::
+
+## 次のステップ
+
+まずは[インストール](/ja/installation)から始め、[使い方](/ja/usage)で一連の流れを確認してください。型や引数の詳細は [API リファレンス](/ja/api)にまとめています。

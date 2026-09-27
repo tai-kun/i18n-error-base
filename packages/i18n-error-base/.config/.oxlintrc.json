@@ -1,5 +1,5 @@
 {
-  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+  "$schema": "../../../node_modules/oxlint/configuration_schema.json",
   "plugins": [
     "eslint",
     "typescript",
@@ -15,7 +15,6 @@
     "correctness": "error"
   },
   "rules": {
-    "no-unused-expressions": "off", // logtape で使用します。
     "vitest/no-focused-tests": "off" // デバッグ作業を容易にします。
   },
   "env": {
