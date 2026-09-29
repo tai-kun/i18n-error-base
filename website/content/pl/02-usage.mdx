@@ -7,13 +7,13 @@ description: Podstawowe operacje definiowania klas błędów, rejestrowania komu
 
 <Steps>
   <Step title="Zdefiniuj klasę błędu">
-    Rozszerz `I18nErrorBase<TMeta>` i zdefiniuj jako `TMeta` informacje, które chcesz wykorzystać do generowania komunikatów.
+    Rozszerz `I18nErrorBase<TMeta>` i zdefiniuj w `TMeta` dane do generowania komunikatu.
   </Step>
   <Step title="Zarejestruj komunikaty dla języków">
-    Zarejestruj komunikaty dla klasy i języka za pomocą `setErrorMessage`.
+    Zarejestruj komunikat dla klasy i języka przez `setErrorMessage`.
   </Step>
   <Step title="Przełącz język i odczytaj message">
-    Przełącz za pomocą `setGlobalConfig({ lang })` biblioteki Valibot i uzyskaj dostęp do `error.message`.
+    Przełącz przez `setGlobalConfig({ lang })` i odczytaj `error.message`.
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## Definiowanie klasy błędu [#define-error-class]
 
-`TMeta` to typ informacji dodatkowych używanych do generowania komunikatów. Jest przechowywany jako `error.meta` i przekazywany także do funkcji podanej do `setErrorMessage`.
+`TMeta` to dane pomocnicze do generowania komunikatu. Są przechowywane w `error.meta` i przekazywane do zarejestrowanych funkcji.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-Drugi argument konstruktora to ciąg znaków lub funkcja `(meta) => string`. Trzeci argument przyjmuje te same opcje co `Error`, np. `{ cause }`.
+Drugi argument to ciąg lub funkcja `(meta) => string`. Trzeci to opcje `Error`, np. `{ cause }`.
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-`I18nErrorBase` nie jest przeznaczony do bezpośredniego tworzenia przez `new`. Zawsze twórz i używaj konkretnej podklasy. Rejestracje komunikatów są rozróżniane na poziomie konstruktora (`this.constructor`), więc komunikat zarejestrowany w klasie nadrzędnej nigdy nie jest dziedziczony przez klasę podrzędną.
+Nie używaj `new` bezpośrednio; zawsze dziedzicz. Rejestracje są przypisane do klasy, więc rejestracja rodzica nie przechodzi na dzieci.
 :::
 
 ## Rejestrowanie komunikatów [#register-message]
 
-`setErrorMessage` rejestruje funkcję tworzącą komunikat dla klasy i języka.
+`setErrorMessage` rejestruje funkcje tworzące komunikat dla klasy i języka.
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-Ciąg znaków jest wewnętrznie konwertowany na `() => text`. Języki można też podać jako tablicę ciągów.
+Dozwolone są też ciągi. Języki można podać jako tablicę.
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-Ponowna rejestracja tej samej klasy i języka nadpisuje poprzedni wpis. Rejestracja jest używana tylko wtedy, gdy konstruktor z momentu rejestracji i z momentu odczytu są identyczne, niezależnie od testów `instanceof`.
+Ponowna rejestracja tej samej klasy i języka nadpisuje wpis. Dotyczy tylko zgodnych konstruktorów przy rejestracji i odczycie, nie przez `instanceof`.
 
 :::warning[Uwaga na dostęp przed rejestracją]
-Funkcyjna postać komunikatu domyślnego jest obliczana i przechowywana w pamięci podręcznej przy pierwszym dostępie. Jeśli odczytasz `message` w niezarejestrowanym języku przed wywołaniem `setErrorMessage`, ta wartość domyślna zostanie utrwalona. Zasadniczo rejestruj komunikaty dla języków przed utworzeniem instancji.
+Odczytanie `message` najpierw utrwala wartość domyślną. Zarejestruj przed utworzeniem instancji.
 :::
 
 ## Przełączanie języków [#switch-language]
 
-Język przełącza się w globalnej konfiguracji Valibot. `message` odwołuje się do bieżącego `lang` przy każdym dostępie.
+Przełącz w globalnej konfiguracji Valibot. `message` odwołuje się do bieżącego `lang` przy każdym odczycie.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-Wartością domyślną, gdy `lang` nie jest ustawiony, jest `"en"`. Jeśli zażądano języka bez rejestracji, stosowany jest komunikat domyślny przekazany do konstruktora.
+Nieustawiony `lang` to `"en"`. Niezarejestrowane języki używają domyślnego komunikatu z konstruktora.
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## Dodawanie prefiksu [#prefix]
 
-Ustawienie `static prefix` w klasie powoduje dodanie go na początku rozwiązanego komunikatu. Dotyczy to zarówno przetłumaczonych komunikatów, jak i komunikatu domyślnego.
+`static prefix` jest dodawany na początku rozwiązanego komunikatu. Dotyczy komunikatów tłumaczonych i domyślnych.
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-Gdy nie jest ustawiony, komunikat jest zwracany bez zmian, bez prefiksu.
+Gdy nie jest ustawiony, zwracany jest bez zmian.
 
 ## Zachowanie jako Error [#error-behavior]
 
 - `error instanceof Error`, `instanceof I18nErrorBase` i `instanceof <klasa konkretna>` zwracają `true`
-- `message` jest wyliczalny (zawarty w `Object.keys(error)`)
 - `String(error)` / `error.toString()` zawierają rozwiązany komunikat (np. `"Error: ..."`)
-- `cause` jest przechowywane przez `new TestError(meta, message, { cause })`. Jako polyfill dla starszych środowisk wykonawczych istnieje obsługa przypisująca `options.cause`, gdy `cause` nie jest wspierane
+- `cause` jest przechowywane przez `{ cause }`
 
 ## Typowe wzorce [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-Strona wywołująca musi zajmować się tylko `meta`, co pozwala uniknąć powielania domyślnego tekstu (tutaj angielskiego).
+Strona wywołująca przekazuje tylko `meta`, co pozwala uniknąć powielania domyślnego tekstu.
 
 ### Rejestrowanie wielu języków naraz [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-Kody języków nie są normalizowane. `"en"` i `"en-US"` są traktowane jako osobne klucze, więc każdy potrzebny kod zarejestruj jawnie.
+Kody języków nie są normalizowane. `"en"` i `"en-US"` to osobne klucze, więc zarejestruj jawnie potrzebne kody.

@@ -5,7 +5,7 @@ description: I18nErrorBase、setErrorMessage 及相关类型的规范。
 
 ## `I18nErrorBase` [#i18n-error-base]
 
-用于继承 `Error` 的基类。将 `message` 重新定义为 getter，并根据 Valibot 的 `lang` 动态解析。
+用于继承 `Error` 的基类。`message` 根据 `lang` 解析。
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -17,31 +17,31 @@ class MyError extends I18nErrorBase<{ code: string }> {}
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | 作为 `meta` 保留的附带信息的类型。不使用时指定 `undefined`。 |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | `meta` 的类型。不使用时指定 `undefined`。 |
 
 ### 静态属性 [#static-props]
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `prefix?` | `string` | `undefined` | 设置后会拼接到解析后消息的开头。 |
+| `prefix?` | `string` | `undefined` | 拼接到解析后消息的开头。 |
 
 ### 实例属性 [#instance-props]
 
 | Prop | Type | Description |
 | ---- | ---- | ----------- |
-| `meta` | `TMeta` | 传给构造函数的附带信息，可读写。 |
-| `message` | `string` | 根据当前 `lang` 解析的消息，可枚举。 |
+| `meta` | `TMeta` | 构造函数的附带信息，可读写。 |
+| `message` | `string` | 根据 `lang` 解析的消息，可枚举。 |
 | `cause` | `unknown` | 经 `ErrorOptions` 传入的原因，`Error` 的标准属性。 |
 
 ### 构造函数 [#constructor]
 
-当 `TMeta` 不包含 `undefined` 时，`meta` 为必填。
+`TMeta` 不包含 `undefined` 时，`meta` 为必填。
 
 ```ts
 new MyError(meta, message, options?)
 ```
 
-当 `TMeta` 为 `undefined` 时，可以省略 `meta`。
+`TMeta` 为 `undefined` 时，可省略 `meta`。
 
 ```ts
 new MyError(message, options?)
@@ -54,17 +54,15 @@ new MyError(meta, message, options?)
 | `message` | `string \| MessageFactory<TMeta>` | 用于未注册语言的默认消息。为函数时接收 `meta`。 |
 | `options` | `ErrorOptions` | 与 `Error` 第二个参数兼容的选项（例如 `{ cause }`）。 |
 
-当 `message` 传入字符串以外的值（例如数字）时会经 `String(...)` 转换为字符串。当消息工厂返回空字符串时，`message` 也为空字符串。
-
 ### 解析顺序 [#resolution-order]
 
 1. 获取 `getGlobalConfig()` 的 `lang`（未设置时为 `"en"`）
-2. 执行经 `setErrorMessage` 注册的该类、该语言的函数，并传入 `meta`
-3. 未注册时使用构造函数的默认消息（字符串或函数的求值结果，首次求值后缓存）
-4. 如果存在 `static prefix`，则拼接到开头
+2. 执行该类、该语言的注册函数，并传入 `meta`
+3. 未注册时使用默认消息
+4. 如有 `static prefix`，则拼接到开头
 
 :::note
-注册的匹配为 `this.constructor` 的完全一致。父类的注册不会被子类继承，请按需要的类分别注册。
+注册按类区分。父类的注册不会被子类继承，请按类分别注册。
 :::
 
 ## `setErrorMessage` [#set-error-message]
@@ -79,11 +77,11 @@ setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
 
 | 参数 | 类型 | 说明 |
 | ------------ | -- | ---- |
-| `reference` | `I18nErrorBaseConstructor` | 继承了 `I18nErrorBase` 的类。未继承的类会导致类型错误。 |
-| `message` | `string \| (meta) => string` | 要注册的消息。`meta` 的类型从目标类的 `meta` 推断。 |
-| `lang` | `string \| Iterable<string>` | 目标语言。单个代码或代码的可迭代对象（例如数组）。 |
+| `reference` | `I18nErrorBaseConstructor` | 继承了 `I18nErrorBase` 的类。未继承的类是类型错误。 |
+| `message` | `string \| (meta) => string` | 要注册的消息。`meta` 的类型从目标类推断。 |
+| `lang` | `string \| Iterable<string>` | 目标语言。单个代码或可迭代对象（例如数组）。 |
 
-字符串会在内部转换为函数后保存。对同一类、同一语言的重新注册会覆盖。保存位置为 `globalThis.i18n_error_base__message_map` 的 `WeakMap`，键为类，值为从语言到函数的 `Map`。
+同一类、同一语言的重新注册会覆盖。
 
 ## 类型 [#types]
 
@@ -95,7 +93,7 @@ type ErrorMeta = {
 };
 ```
 
-`TMeta` 的默认约束，表示具有任意属性的只读对象。
+`TMeta` 的默认约束。具有任意属性的只读对象。
 
 ### `ErrorOptions` [#error-options]
 
@@ -109,7 +107,7 @@ type ErrorOptions =
     : { readonly cause?: unknown };
 ```
 
-从运行环境 `Error` 构造函数第二个参数推导出的类型，可传入包含 `cause` 的选项。后一分支是面向旧环境的回退。
+从 `Error` 第二个参数推导的类型。可传入 `cause`。
 
 ### `MessageFactory<TMeta>` [#message-factory]
 
@@ -119,11 +117,11 @@ interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 }
 ```
 
-根据 `meta` 生成消息的函数，既可用于构造函数的默认消息，也可用于 `setErrorMessage` 的注册值。
+根据 `meta` 生成消息的函数。既可用于默认消息，也可用于注册值。
 
 ### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
 
-表示构造函数参数重载的类型。
+构造函数参数重载。
 
 ```ts
 type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
@@ -134,7 +132,7 @@ type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
     : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
 ```
 
-仅当 `TMeta` 为 `undefined` 时，才允许省略 `meta` 的形式。
+仅当 `TMeta` 为 `undefined` 时，才可省略 `meta`。
 
 ### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
 
@@ -144,10 +142,9 @@ interface I18nErrorBaseConstructor {
 }
 ```
 
-`setErrorMessage` 第一个参数的类型。通过内部标识符号，在类型层面防止混入未继承 `I18nErrorBase` 的类。
+`setErrorMessage` 第一个参数的类型。
 
 ## 补充说明 [#notes]
 
-- 用于解析 `message` 的 `lang` 默认值为 `"en"`，请通过 `setGlobalConfig({ lang })` 显式切换
-- 不会对语言代码进行规范化，也没有回退链（例如从 `en-US` 回退到 `en`）。未注册的语言一律使用默认消息
-- 注册数据保存在进程全局的 `WeakMap` 中。如需在测试中隔离，可通过 `globalThis.i18n_error_base__message_map = undefined` 丢弃
+- `lang` 默认值为 `"en"`，请通过 `setGlobalConfig({ lang })` 切换
+- 不规范化语言代码，也没有回退链（例如 `en-US` → `en`）。未注册的语言使用默认消息

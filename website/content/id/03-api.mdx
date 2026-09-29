@@ -5,7 +5,7 @@ description: Spesifikasi I18nErrorBase, setErrorMessage, dan tipe terkait.
 
 ## `I18nErrorBase` [#i18n-error-base]
 
-Kelas dasar untuk mewarisi `Error`. Mendefinisikan ulang `message` sebagai getter dan menyelesaikannya secara dinamis berdasarkan `lang` Valibot.
+Kelas dasar untuk mewarisi `Error`. `message` diselesaikan menurut `lang`.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -17,25 +17,25 @@ class MyError extends I18nErrorBase<{ code: string }> {}
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Tipe informasi tambahan yang disimpan sebagai `meta`. Tentukan `undefined` jika tidak digunakan. |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Tipe `meta`. Tentukan `undefined` jika tak dipakai. |
 
 ### Properti statis [#static-props]
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `prefix?` | `string` | `undefined` | Jika diatur, digabungkan di awal pesan yang telah diselesaikan. |
+| `prefix?` | `string` | `undefined` | Digabung di awal pesan yang diselesaikan. |
 
 ### Properti instans [#instance-props]
 
 | Prop | Type | Description |
 | ---- | ---- | ----------- |
-| `meta` | `TMeta` | Informasi tambahan yang diberikan ke konstruktor. Dapat dibaca dan ditulis. |
-| `message` | `string` | Pesan yang diselesaikan berdasarkan `lang` saat ini. Dapat dienumerasi. |
-| `cause` | `unknown` | Penyebab yang diberikan melalui `ErrorOptions`. Properti standar `Error`. |
+| `meta` | `TMeta` | Info tambahan dari konstruktor. Dapat dibaca dan ditulis. |
+| `message` | `string` | Diselesaikan menurut `lang` saat ini. Dapat dienumerasi. |
+| `cause` | `unknown` | Penyebab via `ErrorOptions`. Properti standar `Error`. |
 
 ### Konstruktor [#constructor]
 
-Jika `TMeta` tidak mencakup `undefined`, `meta` wajib diisi.
+Jika `TMeta` tidak mencakup `undefined`, `meta` wajib.
 
 ```ts
 new MyError(meta, message, options?)
@@ -50,21 +50,19 @@ new MyError(meta, message, options?)
 
 | Parameter | Tipe | Deskripsi |
 | --------- | ---- | --------- |
-| `meta` | `TMeta` | Informasi tambahan yang digunakan untuk pembuatan pesan. |
-| `message` | `string \| MessageFactory<TMeta>` | Pesan default yang digunakan untuk bahasa yang tidak terdaftar. Jika berupa fungsi, menerima `meta`. |
-| `options` | `ErrorOptions` | Opsi yang kompatibel dengan argumen kedua `Error` (seperti `{ cause }`). |
-
-Jika `message` diberi nilai selain string (misalnya angka), nilainya akan diubah menjadi string dengan `String(...)`. Jika pabrik pesan mengembalikan string kosong, `message` juga menjadi string kosong.
+| `meta` | `TMeta` | Info tambahan untuk pembuatan pesan. |
+| `message` | `string \| MessageFactory<TMeta>` | Pesan default untuk bahasa tak terdaftar. Fungsi menerima `meta`. |
+| `options` | `ErrorOptions` | Opsi kompatibel dengan argumen kedua `Error` (seperti `{ cause }`). |
 
 ### Urutan resolusi [#resolution-order]
 
-1. Mendapatkan `lang` dari `getGlobalConfig()` ( `"en"` jika belum diatur)
-2. Menjalankan fungsi untuk kelas dan bahasa tersebut yang didaftarkan dengan `setErrorMessage` beserta `meta`
-3. Jika tidak terdaftar, gunakan pesan default konstruktor (string atau hasil evaluasi fungsi; di-cache setelah evaluasi pertama)
-4. Jika `static prefix` ada, gabungkan di awal
+1. Mendapatkan `lang` dari `getGlobalConfig()` (`"en"` jika belum diatur)
+2. Menjalankan fungsi terdaftar kelas dan bahasa itu beserta `meta`
+3. Jika tak terdaftar, pakai pesan default
+4. Jika `static prefix` ada, gabung di awal
 
 :::note
-Pencocokan pendaftaran adalah kecocokan persis `this.constructor`. Pendaftaran ke kelas induk tidak diwarisi oleh kelas anak. Daftarkan untuk setiap kelas yang dibutuhkan.
+Pencocokan pendaftaran per kelas. Pendaftaran induk tak diwarisi. Daftarkan tiap kelas.
 :::
 
 ## `setErrorMessage` [#set-error-message]
@@ -79,11 +77,11 @@ setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
 
 | Parameter | Tipe | Deskripsi |
 | --------- | ---- | --------- |
-| `reference` | `I18nErrorBaseConstructor` | Kelas yang mewarisi `I18nErrorBase`. Kelas yang tidak mewarisinya akan menjadi error tipe. |
-| `message` | `string \| (meta) => string` | Pesan yang didaftarkan. Tipe `meta` disimpulkan dari `meta` kelas target. |
-| `lang` | `string \| Iterable<string>` | Bahasa target. Kode tunggal atau objek yang dapat diiterasi berisi kode (seperti array). |
+| `reference` | `I18nErrorBaseConstructor` | Kelas pewaris `I18nErrorBase`. Jika tidak, error tipe. |
+| `message` | `string \| (meta) => string` | Pesan terdaftar. Tipe `meta` disimpulkan dari kelas target. |
+| `lang` | `string \| Iterable<string>` | Bahasa target. Kode tunggal atau objek iterable (seperti array). |
 
-String diubah menjadi fungsi secara internal sebelum disimpan. Pendaftaran ulang untuk kelas dan bahasa yang sama akan menimpa. Tempat penyimpanan adalah `WeakMap` di `globalThis.i18n_error_base__message_map`, dengan kunci berupa kelas dan nilai berupa `Map` dari bahasa ke fungsi.
+Pendaftaran ulang kelas dan bahasa yang sama menimpa.
 
 ## Tipe [#types]
 
@@ -95,7 +93,7 @@ type ErrorMeta = {
 };
 ```
 
-Batasan default untuk `TMeta`. Menyatakan objek hanya-baca dengan properti sembarang.
+Batasan default `TMeta`. Objek hanya-baca dengan properti sembarang.
 
 ### `ErrorOptions` [#error-options]
 
@@ -109,7 +107,7 @@ type ErrorOptions =
     : { readonly cause?: unknown };
 ```
 
-Tipe yang diturunkan dari argumen kedua konstruktor `Error` lingkungan runtime. Opsi yang memuat `cause` dapat diberikan. Cabang terakhir adalah fallback untuk lingkungan lama.
+Tipe turunan dari argumen kedua `Error`. Dapat memberi `cause`.
 
 ### `MessageFactory<TMeta>` [#message-factory]
 
@@ -119,11 +117,11 @@ interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 }
 ```
 
-Fungsi yang menghasilkan pesan dari `meta`. Digunakan baik untuk pesan default konstruktor maupun nilai yang didaftarkan dengan `setErrorMessage`.
+Fungsi pembuat pesan dari `meta`. Untuk default maupun terdaftar.
 
 ### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
 
-Tipe yang menyatakan overload argumen konstruktor.
+Overload argumen konstruktor.
 
 ```ts
 type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
@@ -134,7 +132,7 @@ type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
     : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
 ```
 
-Bentuk tanpa `meta` hanya diizinkan jika `TMeta` adalah `undefined`.
+Tanpa `meta` hanya boleh jika `TMeta` adalah `undefined`.
 
 ### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
 
@@ -144,10 +142,9 @@ interface I18nErrorBaseConstructor {
 }
 ```
 
-Tipe argumen pertama `setErrorMessage`. Simbol identifikasi internal mencegah tercampurnya kelas yang tidak mewarisi `I18nErrorBase` pada tingkat tipe.
+Tipe argumen pertama `setErrorMessage`.
 
 ## Catatan [#notes]
 
-- Nilai default `lang` yang digunakan untuk menyelesaikan `message` adalah `"en"`. Beralihlah secara eksplisit dengan `setGlobalConfig({ lang })`
-- Tidak ada normalisasi kode bahasa maupun rantai fallback (misalnya pengalihan dari `en-US` ke `en`). Bahasa yang tidak terdaftar selalu menjadi pesan default
-- Data pendaftaran disimpan di `WeakMap` seluruh proses. Untuk mengisolasi pengujian, data dapat dibuang dengan `globalThis.i18n_error_base__message_map = undefined`
+- Default `lang` adalah `"en"`. Beralih eksplisit dengan `setGlobalConfig({ lang })`
+- Tanpa normalisasi kode bahasa maupun rantai fallback (mis. `en-US` → `en`). Bahasa tak terdaftar menjadi pesan default

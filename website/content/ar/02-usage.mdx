@@ -7,13 +7,13 @@ description: العمليات الأساسية لتعريف فئات الأخط�
 
 <Steps>
   <Step title="تعريف فئة الخطأ">
-    ورِّث `I18nErrorBase<TMeta>` وعرِّف المعلومات المطلوبة لإنشاء الرسالة على أنها `TMeta`.
+    ورِّث `I18nErrorBase<TMeta>` وعرِّف معلومات إنشاء الرسالة في `TMeta`.
   </Step>
   <Step title="تسجيل الرسائل الخاصة بكل لغة">
-    سجِّل الرسالة المقابلة للفئة واللغة عبر `setErrorMessage`.
+    سجِّل رسالة كل فئة ولغة عبر `setErrorMessage`.
   </Step>
   <Step title="تبديل اللغة وقراءة message">
-    بدِّل اللغة عبر `setGlobalConfig({ lang })` في Valibot، ثم اقرأ `error.message`.
+    بدِّل عبر `setGlobalConfig({ lang })` واقرأ `error.message`.
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## تعريف فئة الخطأ [#define-error-class]
 
-`TMeta` هو نوع المعلومات الإضافية المستخدمة في إنشاء الرسالة. يُحفَظ على أنه `error.meta` ويُمرَّر أيضًا إلى الدالة المسجلة في `setErrorMessage`.
+`TMeta` معلومات مساعدة لإنشاء الرسالة. تُحفظ في `error.meta` وتُمرَّر إلى الدوال المسجلة.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-الوسيط الثاني للمُنشئ هو سلسلة نصية أو دالة بالشكل `(meta) => string`. أما الوسيط الثالث فيقبل نفس خيارات `Error` مثل `{ cause }`.
+الوسيط الثاني سلسلة أو دالة `(meta) => string`. والثالث `{ cause }` وخيارات `Error` الأخرى.
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-ليس من المفترض إنشاء `I18nErrorBase` نفسها مباشرة عبر `new`. بل أنشئ دائمًا فئة ملموسة وارثة واستخدمها. ونظرًا لأن وجهة تسجيل الرسائل تُميَّز لكل مُنشئ (`this.constructor`)، فإن الرسالة المسجلة على الفئة الأب لا تُورَّث إلى الفئة الابنة.
+لا تستخدم `new` مباشرة؛ بل ورِّث دائمًا. التسجيل لكل فئة، فتسجيل الأب لا يُورَّث للأبناء.
 :::
 
 ## تسجيل الرسائل [#register-message]
 
-تُسجِّل `setErrorMessage` دالة إنشاء الرسالة لفئة ولغة معينتين.
+`setErrorMessage` تسجّل دوال إنشاء الرسائل لكل فئة ولغة.
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-تُحوَّل السلسلة النصية داخليًا إلى `() => text`. ويمكن أيضًا تحديد اللغة كمصفوفة من السلاسل النصية.
+السلاسل مسموحة أيضًا. ويمكن تحديد اللغات كمصفوفات.
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-تؤدي إعادة التسجيل لنفس الفئة واللغة إلى الكتابة فوق القيمة السابقة. ولا يُستخدَم محتوى التسجيل إلا عندما يتطابق المُنشئ وقت التسجيل مع المُنشئ وقت القراءة، بصرف النظر عن حكم `instanceof`.
+إعادة التسجيل لنفس الفئة واللغة تكتب فوق السابقة. تُستخدم فقط عند تطابق المُنشئين وقت التسجيل والقراءة، لا عبر `instanceof`.
 
 :::warning[تنبيه بشأن الوصول قبل التسجيل]
-يُقيَّم الشكل الدالّي للرسالة الافتراضية ويُخزَّن مؤقتًا عند أول وصول. فإذا قرأت `message` بلغة غير مسجلة قبل استدعاء `setErrorMessage`، تُثبَّت تلك القيمة الافتراضية. وكقاعدة عامة، سجِّل رسائل كل لغة قبل إنشاء النسخ.
+قراءة `message` أولًا تُثبِّت القيمة الافتراضية. سجِّل قبل إنشاء النسخ.
 :::
 
 ## تبديل اللغة [#switch-language]
 
-تُبدَّل اللغة عبر الإعداد العالمي في Valibot. وتشير `message` إلى `lang` الحالية عند كل وصول.
+بدِّل عبر الإعداد العالمي في Valibot. تشير `message` إلى `lang` الحالية عند كل قراءة.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-القيمة الافتراضية عند عدم ضبط `lang` هي `"en"`. وعند طلب لغة غير مسجلة، يتم التراجع إلى الرسالة الافتراضية المُمرَّرة إلى المُنشئ.
+غير المضبوط من `lang` هو `"en"`. واللغات غير المسجلة تستخدم الرسالة الافتراضية للمُنشئ.
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## إضافة بادئة [#prefix]
 
-عند ضبط `static prefix` على الفئة، يُوصَل في بداية الرسالة المحلولة. وينطبق ذلك على كل من الرسالة المترجمة والرسالة الافتراضية.
+`static prefix` يُضاف إلى بداية الرسالة المحلولة. وينطبق على المترجمة والافتراضية.
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-عند عدم ضبطها تُرجَع الرسالة كما هي دون بادئة.
+عند عدم الضبط تُرجَع كما هي.
 
 ## السلوك ككائن Error [#error-behavior]
 
-- كل من `error instanceof Error` و`instanceof I18nErrorBase` و`instanceof` للفئة الملموسة يكون `true`
-- الخاصية `message` قابلة للتعداد (تُشمَل في `Object.keys(error)`)
-- يتضمن `String(error)` / `error.toString()` الرسالة المحلولة (مثل: `"Error: ..."`)
-- يُحفَظ `cause` عبر `new TestError(meta, message, { cause })`. وكحل بديل (polyfill) لبيئات التنفيذ القديمة، توجد معالجة تُسند `options.cause` عند عدم دعم `cause`
+- `error instanceof Error` و`instanceof I18nErrorBase` و`instanceof` الفئة الملموسة كلها `true`
+- `String(error)` / `error.toString()` يتضمنان الرسالة المحلولة (مثل: `"Error: ..."`)
+- `cause` يُحفظ عبر `{ cause }`
 
 ## الأنماط الشائعة [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-يكفي أن يهتم المستدعي بـ`meta` فقط، وبذلك يُتجنَّب تكرار النص الافتراضي (الإنجليزية هنا).
+يكفي أن يمرِّر المستدعي `meta` فقط، متجنبًا تكرار النص الافتراضي.
 
 ### تسجيل لغات متعددة معًا [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-لا تُطبَّق تسوية على رموز اللغة. إذ يُعامَل `"en"` و`"en-US"` كمفتاحين منفصلين، لذلك سجِّل كل رمز مطلوب صراحة.
+لا تُسوَّى رموز اللغة. `"en"` و`"en-US"` مفتاحان منفصلان، فسجِّل الرموز اللازمة صراحة.

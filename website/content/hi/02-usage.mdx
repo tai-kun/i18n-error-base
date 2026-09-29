@@ -7,13 +7,13 @@ description: त्रुटि वर्ग की परिभाषा, स�
 
 <Steps>
   <Step title="त्रुटि वर्ग परिभाषित करें">
-    `I18nErrorBase<TMeta>` को विस्तारित करें और संदेश निर्माण में उपयोग की जाने वाली जानकारी को `TMeta` के रूप में परिभाषित करें।
+    `I18nErrorBase<TMeta>` को विस्तारित करें और संदेश निर्माण की जानकारी `TMeta` में परिभाषित करें।
   </Step>
   <Step title="प्रत्येक भाषा के संदेश पंजीकृत करें">
-    `setErrorMessage` से वर्ग और भाषा के अनुरूप संदेश पंजीकृत करें।
+    `setErrorMessage` से प्रत्येक वर्ग और भाषा का संदेश पंजीकृत करें।
   </Step>
   <Step title="भाषा बदलकर message पढ़ें">
-    Valibot के `setGlobalConfig({ lang })` से बदलें और `error.message` तक पहुँचें।
+    `setGlobalConfig({ lang })` से बदलें और `error.message` पढ़ें।
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## त्रुटि वर्ग परिभाषित करें [#define-error-class]
 
-`TMeta` संदेश निर्माण में उपयोग की जाने वाली सहायक जानकारी का प्रकार है। इसे `error.meta` के रूप में रखा जाता है और `setErrorMessage` के फ़ंक्शन को भी दिया जाता है।
+`TMeta` संदेश निर्माण की सहायक जानकारी है। इसे `error.meta` में रखा जाता है और पंजीकृत फ़ंक्शनों को दिया जाता है।
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-कंस्ट्रक्टर का दूसरा तर्क स्ट्रिंग या `(meta) => string` फ़ंक्शन होता है। तीसरे तर्क में `Error` जैसा ही `{ cause }` आदि विकल्प दिया जा सकता है।
+दूसरा तर्क स्ट्रिंग या `(meta) => string` फ़ंक्शन है। तीसरा `{ cause }` आदि `Error` विकल्प है।
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-`I18nErrorBase` को सीधे `new` करना अपेक्षित नहीं है। अवश्य इसे विस्तारित करके ठोस वर्ग बनाकर उपयोग करें। संदेशों का पंजीकरण स्थान कंस्ट्रक्टर इकाई (`this.constructor`) से अलग पहचाना जाता है, इसलिए मूल वर्ग में पंजीकृत संदेश उपवर्ग में विरासत में नहीं मिलते।
+सीधे `new` न करें; हमेशा विस्तारित करें। पंजीकरण प्रति-वर्ग है, इसलिए मूल का पंजीकरण उपवर्ग को नहीं मिलता।
 :::
 
 ## संदेश पंजीकृत करें [#register-message]
 
-`setErrorMessage` वर्ग और भाषा के लिए संदेश निर्माण फ़ंक्शन पंजीकृत करता है।
+`setErrorMessage` प्रति-वर्ग, प्रति-भाषा फ़ैक्टरी फ़ंक्शन पंजीकृत करता है।
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-स्ट्रिंग देने पर आंतरिक रूप से `() => text` में बदला जाता है। भाषा स्ट्रिंग के ऐरे में भी निर्दिष्ट की जा सकती है।
+स्ट्रिंग भी दी जा सकती है। भाषाएँ ऐरे में निर्दिष्ट की जा सकती हैं।
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-समान वर्ग और भाषा में पुनः पंजीकृत करने पर अधिलेखित होता है। पंजीकृत सामग्री `instanceof` निर्णय से असंबंधित होती है और केवल पंजीकरण समय और संदर्भ समय के कंस्ट्रक्टर समान होने पर उपयोग होती है।
+समान वर्ग और भाषा में पुनः पंजीकरण अधिलेखन करता है। केवल पंजीकरण और संदर्भ समय के कंस्ट्रक्टर समान होने पर लागू होता है, `instanceof` से नहीं।
 
 :::warning[पंजीकरण से पहले एक्सेस पर ध्यान दें]
-डिफ़ॉल्ट संदेश का फ़ंक्शन रूप पहले एक्सेस पर मूल्यांकित करके कैश किया जाता है। `setErrorMessage` से पहले अपंजीकृत भाषा में `message` पढ़ने पर, वह डिफ़ॉल्ट मान स्थिर हो जाता है। प्रत्येक भाषा के संदेश सिद्धांत रूप से इंस्टेंस निर्माण से पहले पंजीकृत करें।
+पहले `message` पढ़ने पर डिफ़ॉल्ट मान स्थिर हो जाता है। इंस्टेंस बनाने से पहले पंजीकृत करें।
 :::
 
 ## भाषा बदलें [#switch-language]
 
-भाषा Valibot की वैश्विक सेटिंग से बदली जाती है। `message` प्रत्येक एक्सेस पर वर्तमान `lang` को देखता है।
+Valibot की वैश्विक सेटिंग से बदलें। `message` प्रत्येक पठन पर वर्तमान `lang` को देखता है।
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-`lang` सेट न होने पर डिफ़ॉल्ट `"en"` होता है। अपंजीकृत भाषा माँगने पर, कंस्ट्रक्टर को दिए गए डिफ़ॉल्ट संदेश पर फ़ॉलबैक होता है।
+अनसेट `lang` `"en"` है। अपंजीकृत भाषाएँ कंस्ट्रक्टर के डिफ़ॉल्ट संदेश का उपयोग करती हैं।
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## उपसर्ग जोड़ें [#prefix]
 
-वर्ग में `static prefix` सेट करने पर, हल किए गए संदेश की शुरुआत में जोड़ा जाता है। अनूदित संदेश और डिफ़ॉल्ट संदेश दोनों पर लागू होता है।
+`static prefix` हल किए गए संदेश की शुरुआत में जोड़ा जाता है। अनूदित और डिफ़ॉल्ट दोनों पर लागू होता है।
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-सेट न करने पर बिना उपसर्ग के वैसे ही लौटता है।
+सेट न करने पर वैसे ही लौटता है।
 
 ## Error के रूप में व्यवहार [#error-behavior]
 
-- `error instanceof Error`, `instanceof I18nErrorBase`, `instanceof ठोस वर्ग` सभी `true` होते हैं
-- `message` गणनीय है (`Object.keys(error)` में शामिल होता है)
-- `String(error)` / `error.toString()` में हल किया गया संदेश शामिल होता है (उदा.: `"Error: ..."`)
-- `cause` `new TestError(meta, message, { cause })` से रखा जाता है। पुराने निष्पादन वातावरण के लिए पॉलीफ़िल के रूप में, `cause` असमर्थित होने पर `options.cause` निर्दिष्ट करने की प्रक्रिया शामिल है
+- `error instanceof Error`, `instanceof I18nErrorBase`, `instanceof` ठोस वर्ग सभी `true` हैं
+- `String(error)` / `error.toString()` में हल किया गया संदेश शामिल है (उदा.: `"Error: ..."`)
+- `cause` `{ cause }` से रखा जाता है
 
 ## सामान्य पैटर्न [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-कॉल करने वाले पक्ष को केवल `meta` का ध्यान रखना होता है और डिफ़ॉल्ट पाठ (यहाँ अंग्रेज़ी) की पुनरावृत्ति से बचा जा सकता है।
+कॉल करने वाला केवल `meta` देता है, डिफ़ॉल्ट पाठ की पुनरावृत्ति से बचता है।
 
 ### कई भाषाओं को एक साथ पंजीकृत करें [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-भाषा कोड का सामान्यीकरण नहीं होता। `"en"` और `"en-US"` अलग कुंजी माने जाते हैं, इसलिए आवश्यक कोड स्पष्ट रूप से पंजीकृत करें।
+भाषा कोड सामान्यीकृत नहीं होते। `"en"` और `"en-US"` अलग कुंजी हैं, इसलिए आवश्यक कोड स्पष्ट रूप से पंजीकृत करें।

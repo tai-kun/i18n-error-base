@@ -5,7 +5,7 @@ description: Specifikacija za I18nErrorBase, setErrorMessage i povezane tipove.
 
 ## `I18nErrorBase` [#i18n-error-base]
 
-Osnovna klasa za nasljeđivanje klase `Error`. Ponovno definira `message` kao getter i dinamički ga razrješava prema Valibot postavci `lang`.
+Osnovna klasa za proširenje `Error`. `message` se razrješava prema `lang`.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -17,31 +17,31 @@ class MyError extends I18nErrorBase<{ code: string }> {}
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Tip pratećih informacija koje se čuvaju kao `meta`. Ako se ne koristi, navedite `undefined`. |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Tip `meta`. Kad se ne koristi, navedite `undefined`. |
 
 ### Statička svojstva [#static-props]
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `prefix?` | `string` | `undefined` | Ako se postavi, dodaje se na početak razriješene poruke. |
+| `prefix?` | `string` | `undefined` | Dodaje se na početak razriješene poruke. |
 
 ### Svojstva instance [#instance-props]
 
 | Prop | Type | Description |
 | ---- | ---- | ----------- |
-| `meta` | `TMeta` | Prateće informacije predane konstruktoru. Mogu se čitati i pisati. |
-| `message` | `string` | Poruka razriješena prema trenutnom `lang`. Može se nabrojiti. |
-| `cause` | `unknown` | Uzrok predan putem `ErrorOptions`. Standardno svojstvo klase `Error`. |
+| `meta` | `TMeta` | Pomoćne info iz konstruktora. Mogu se čitati i pisati. |
+| `message` | `string` | Poruka razriješena prema `lang`. Može se nabrojiti. |
+| `cause` | `unknown` | Uzrok iz `ErrorOptions`. Standardno svojstvo `Error`. |
 
 ### Konstruktor [#constructor]
 
-Ako `TMeta` ne uključuje `undefined`, `meta` je obavezan.
+Ako `TMeta` isključuje `undefined`, `meta` je obavezan.
 
 ```ts
 new MyError(meta, message, options?)
 ```
 
-Ako je `TMeta` tipa `undefined`, `meta` se može izostaviti.
+Ako je `TMeta` `undefined`, `meta` se može izostaviti.
 
 ```ts
 new MyError(message, options?)
@@ -50,26 +50,24 @@ new MyError(meta, message, options?)
 
 | Parametar | Tip | Opis |
 | --------- | --- | ---- |
-| `meta` | `TMeta` | Prateće informacije koje se koriste za generiranje poruke. |
-| `message` | `string \| MessageFactory<TMeta>` | Zadana poruka koja se koristi za jezike bez registracije. Ako je funkcija, prima `meta`. |
-| `options` | `ErrorOptions` | Opcije kompatibilne s drugim argumentom konstruktora `Error` (npr. `{ cause }`). |
-
-Ako se za `message` proslijedi nešto što nije string (npr. broj), pretvara se u string pomoću `String(...)`. Ako funkcija za izradu poruke vrati prazan string, i `message` će biti prazan string.
+| `meta` | `TMeta` | Pomoćne info za generiranje poruke. |
+| `message` | `string \| MessageFactory<TMeta>` | Zadana poruka za neregistrirane jezike. Funkcije primaju `meta`. |
+| `options` | `ErrorOptions` | Opcije kompatibilne s 2. argumentom `Error` (npr. `{ cause }`). |
 
 ### Redoslijed razrješavanja [#resolution-order]
 
-1. Dohvaća `lang` iz `getGlobalConfig()` (kada nije postavljeno, `"en"`)
-2. Izvršava funkciju za dotičnu klasu i dotični jezik registriranu pomoću `setErrorMessage`, s proslijeđenim `meta`
-3. Ako nije registrirano, koristi zadanu poruku iz konstruktora (string ili rezultat procjene funkcije; nakon prve procjene sprema se u predmemoriju)
-4. Ako postoji `static prefix`, dodaje ga na početak
+1. Dohvaća `lang` iz `getGlobalConfig()` (`"en"` kad nije postavljeno)
+2. Izvršava registriranu funkciju za tu klasu i jezik s `meta`
+3. Kad nije registrirano, koristi zadanu poruku
+4. Ako je postavljen `static prefix`, dodaje ga na početak
 
 :::note
-Podudaranje registracije je stroga jednakost s `this.constructor`. Registracija na roditeljskoj klasi ne nasljeđuje se na podređenu klasu. Registrirajte poruku za svaku potrebnu klasu.
+Registracije su po klasi. Roditeljske se ne nasljeđuju. Registrirajte svaku klasu.
 :::
 
 ## `setErrorMessage` [#set-error-message]
 
-Registrira funkciju za izradu poruke za svaki jezik.
+Registrira tvorničke funkcije poruka po jeziku.
 
 ```ts
 import { setErrorMessage } from "i18n-error-base";
@@ -79,11 +77,11 @@ setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
 
 | Parametar | Tip | Opis |
 | --------- | --- | ---- |
-| `reference` | `I18nErrorBaseConstructor` | Klasa koja nasljeđuje `I18nErrorBase`. Klase koje ga ne nasljeđuju uzrokuju pogrešku tipa. |
-| `message` | `string \| (meta) => string` | Poruka za registraciju. Tip `meta` izvodi se iz `meta` ciljane klase. |
-| `lang` | `string \| Iterable<string>` | Ciljani jezik. Jedan jezični kod ili iterabilni objekt kodova (npr. polje). |
+| `reference` | `I18nErrorBaseConstructor` | Klasa koja proširuje `I18nErrorBase`. Ostale su pogreška tipa. |
+| `message` | `string \| (meta) => string` | Poruka za registraciju. `meta` se izvodi iz ciljane klase. |
+| `lang` | `string \| Iterable<string>` | Ciljani jezik. Jedan kod ili iterabil (npr. polje). |
 
-Stringovi se interno pretvaraju u funkcije i čuvaju. Ponovna registracija za istu klasu i isti jezik prepisuje prethodnu vrijednost. Pohranjuje se u `WeakMap` na `globalThis.i18n_error_base__message_map`, pri čemu je ključ klasa, a vrijednost `Map` od jezika do funkcije.
+Ponovna registracija iste klase i jezika prepisuje.
 
 ## Tipovi [#types]
 
@@ -95,7 +93,7 @@ type ErrorMeta = {
 };
 ```
 
-Zadano ograničenje za `TMeta`. Predstavlja objekt samo za čitanje s proizvoljnim svojstvima.
+Zadano ograničenje za `TMeta`. Objekt samo za čitanje s proizvoljnim svojstvima.
 
 ### `ErrorOptions` [#error-options]
 
@@ -109,7 +107,7 @@ type ErrorOptions =
     : { readonly cause?: unknown };
 ```
 
-Tip izveden iz drugog argumenta konstruktora `Error` u izvršnom okruženju. Mogu se proslijediti opcije koje sadrže `cause`. Druga grana je zamjenska vrijednost za starija okruženja.
+Tip izveden iz 2. argumenta `Error`. Može se proslijediti `cause`.
 
 ### `MessageFactory<TMeta>` [#message-factory]
 
@@ -119,11 +117,11 @@ interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 }
 ```
 
-Funkcija koja generira poruku iz `meta`. Može se koristiti i kao zadana poruka konstruktora i kao registrirana vrijednost u `setErrorMessage`.
+Funkcija koja stvara poruku iz `meta`. Koristi se i za zadane i za registrirane poruke.
 
 ### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
 
-Tip koji predstavlja preopterećenja argumenata konstruktora.
+Preopterećenja argumenata konstruktora.
 
 ```ts
 type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
@@ -134,7 +132,7 @@ type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
     : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
 ```
 
-Skraćeni oblik bez `meta` dopušten je samo kada je `TMeta` tipa `undefined`.
+`meta` se izostavlja samo kad je `TMeta` `undefined`.
 
 ### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
 
@@ -144,10 +142,9 @@ interface I18nErrorBaseConstructor {
 }
 ```
 
-Tip prvog argumenta metode `setErrorMessage`. Internim simbolom za identifikaciju sprječava se na razini tipa miješanje klasa koje ne nasljeđuju `I18nErrorBase`.
+Tip 1. argumenta `setErrorMessage`.
 
 ## Napomene [#notes]
 
-- Zadana vrijednost `lang` koja se koristi za razrješavanje `message` je `"en"`. Izričito prebacite pomoću `setGlobalConfig({ lang })`
-- Nema normalizacije jezičnih kodova ni lanca zamjenskih jezika (npr. povratak s `en-US` na `en`). Neregistrirani jezici uvijek daju zadanu poruku
-- Registrirani podaci čuvaju se u `WeakMap` cijelog procesa. Ako ih želite izolirati u testovima, možete ih odbaciti s `globalThis.i18n_error_base__message_map = undefined`
+- Zadani `lang` je `"en"`. Prebacite s `setGlobalConfig({ lang })`
+- Nema normalizacije kodova ni lanca zamjene (npr. `en-US` → `en`). Neregistrirani jezici daju zadanu poruku

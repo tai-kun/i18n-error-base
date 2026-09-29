@@ -7,13 +7,13 @@ description: এরর ক্লাসের সংজ্ঞা, বার্ত
 
 <Steps>
   <Step title="এরর ক্লাস সংজ্ঞায়িত করুন">
-    `I18nErrorBase<TMeta>` থেকে উত্তরাধিকার নিন, বার্তা তৈরিতে ব্যবহার করতে চান এমন তথ্য `TMeta` হিসেবে সংজ্ঞায়িত করুন।
+    `I18nErrorBase<TMeta>` থেকে উত্তরাধিকার নিন, বার্তা তৈরির তথ্য `TMeta` হিসেবে সংজ্ঞায়িত করুন।
   </Step>
   <Step title="প্রতিটি ভাষার বার্তা নিবন্ধন করুন">
-    `setErrorMessage` দিয়ে ক্লাস ও ভাষা অনুযায়ী বার্তা নিবন্ধন করুন।
+    `setErrorMessage` দিয়ে প্রতিটি ক্লাস ও ভাষার বার্তা নিবন্ধন করুন।
   </Step>
   <Step title="ভাষা বদলে message পড়ুন">
-    Valibot-এর `setGlobalConfig({ lang })` দিয়ে বদলে, `error.message` অ্যাক্সেস করুন।
+    `setGlobalConfig({ lang })` দিয়ে বদলে `error.message` পড়ুন।
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## এরর ক্লাস সংজ্ঞায়িত করুন [#define-error-class]
 
-`TMeta` হলো বার্তা তৈরিতে ব্যবহৃত আনুষঙ্গিক তথ্যের টাইপ। `error.meta` হিসেবে সংরক্ষিত থাকে, `setErrorMessage`-এর ফাংশনেও পাঠানো হয়।
+`TMeta` বার্তা তৈরির সহায়ক তথ্য। `error.meta` হিসেবে রাখা হয়, নিবন্ধিত ফাংশনেও পাঠানো হয়।
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-কনস্ট্রাক্টরের ২য় আর্গুমেন্ট স্ট্রিং বা `(meta) => string` ফাংশন। ৩য় আর্গুমেন্টে `Error`-এর মতো `{ cause }` ইত্যাদি অপশন দেওয়া যায়।
+২য় আর্গুমেন্ট স্ট্রিং বা `(meta) => string` ফাংশন। ৩য়টি `{ cause }` ইত্যাদি `Error` অপশন।
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-`I18nErrorBase` সরাসরি `new` করা অনুমিত নয়। অবশ্যই উত্তরাধিকারী সুনির্দিষ্ট ক্লাস বানিয়ে ব্যবহার করুন। বার্তার নিবন্ধন-স্থান কনস্ট্রাক্টর-প্রতি (`this.constructor`) আলাদা করা হয় বলে, প্যারেন্ট ক্লাসে নিবন্ধিত বার্তা চাইল্ড ক্লাসে উত্তরাধিকারসূত্রে যায় না।
+সরাসরি `new` করবেন না; সবসময় উত্তরাধিকার নিন। নিবন্ধন ক্লাস-প্রতি, তাই প্যারেন্টের নিবন্ধন চাইল্ডে যায় না।
 :::
 
 ## বার্তা নিবন্ধন করুন [#register-message]
 
-`setErrorMessage` ক্লাস ও ভাষার জন্য বার্তা তৈরির ফাংশন নিবন্ধন করে।
+`setErrorMessage` ক্লাস-প্রতি, ভাষা-প্রতি ফ্যাক্টরি ফাংশন নিবন্ধন করে।
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-স্ট্রিং দিলে অভ্যন্তরীণভাবে `() => text`-এ রূপান্তর হয়। ভাষা স্ট্রিংয়ের অ্যারে দিয়েও নির্দিষ্ট করা যায়।
+স্ট্রিংও দেওয়া যায়। ভাষা অ্যারে দিয়েও নির্দিষ্ট করা যায়।
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-একই ক্লাস ও ভাষায় পুনরায় নিবন্ধন করলে ওভাররাইট হয়। নিবন্ধন-বিষয় `instanceof` নির্ণয়ের সাথে সম্পর্কহীনভাবে, শুধু নিবন্ধন ও রেফারেন্সের সময় কনস্ট্রাক্টর একই হলেই ব্যবহৃত হয়।
+একই ক্লাস ও ভাষায় পুনর্নিবন্ধন ওভাররাইট করে। শুধু নিবন্ধন ও রেফারেন্সের কনস্ট্রাক্টর একই হলেই ব্যবহৃত হয়, `instanceof` দিয়ে নয়।
 
 :::warning[নিবন্ধনের আগে অ্যাক্সেসে সতর্কতা]
-ডিফল্ট বার্তার ফাংশন রূপ প্রথম অ্যাক্সেসে মূল্যায়ন করে ক্যাশ করা হয়। `setErrorMessage`-এর আগে অনিবন্ধিত ভাষায় `message` পড়লে, সেই ডিফল্ট মান স্থির হয়ে যায়। প্রতিটি ভাষার বার্তা নীতিগতভাবে ইনস্ট্যান্স তৈরির আগে নিবন্ধন করুন।
+আগে `message` পড়লে ডিফল্ট মান স্থির হয়ে যায়। ইনস্ট্যান্স তৈরির আগে নিবন্ধন করুন।
 :::
 
 ## ভাষা বদলান [#switch-language]
 
-ভাষা Valibot-এর গ্লোবাল সেটিং দিয়ে বদলান। `message` প্রতিটি অ্যাক্সেসে বর্তমান `lang` দেখে।
+Valibot-এর গ্লোবাল সেটিং দিয়ে বদলান। `message` প্রতিটি পাঠে বর্তমান `lang` দেখে।
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-`lang` সেট না থাকলে ডিফল্ট `"en"`। অনিবন্ধিত ভাষা চাইলে, কনস্ট্রাক্টরে দেওয়া ডিফল্ট বার্তায় ফলব্যাক করে।
+অনসেট `lang` হলো `"en"`। অনিবন্ধিত ভাষা কনস্ট্রাক্টরের ডিফল্ট বার্তা ব্যবহার করে।
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## উপসর্গ যোগ করুন [#prefix]
 
-ক্লাসে `static prefix` সেট করলে, রিজলভ হওয়া বার্তার শুরুতে যুক্ত হয়। অনুবাদিত বার্তা ও ডিফল্ট বার্তা উভয়ের ক্ষেত্রেই প্রযোজ্য।
+`static prefix` রিজলভ হওয়া বার্তার শুরুতে যুক্ত হয়। অনুবাদিত ও ডিফল্ট উভয়ের ক্ষেত্রে প্রযোজ্য।
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-সেট না করলে উপসর্গ ছাড়াই যথাযথ ফেরত আসে।
+সেট না করলে যথাযথ ফেরত আসে।
 
 ## Error হিসেবে আচরণ [#error-behavior]
 
 - `error instanceof Error`, `instanceof I18nErrorBase`, `instanceof` সুনির্দিষ্ট ক্লাস সবই `true`
-- `message` এনিউমারেবল (`Object.keys(error)`-তে অন্তর্ভুক্ত)
 - `String(error)` / `error.toString()` রিজলভ হওয়া বার্তা অন্তর্ভুক্ত করে (যেমন: `"Error: ..."`)
-- `cause` `new TestError(meta, message, { cause })` দিয়ে সংরক্ষিত হয়। পুরোনো রানটাইমের জন্য পলিফিল হিসেবে, `cause` অসমর্থিত হলে `options.cause` বসানোর প্রক্রিয়া আছে
+- `cause` `{ cause }` দিয়ে সংরক্ষিত হয়
 
 ## প্রচলিত প্যাটার্ন [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-ডাক-পক্ষে শুধু `meta` ভাবলেই চলে, ডিফল্ট বাক্যের (এখানে ইংরেজি) পুনরাবৃত্তি এড়ানো যায়।
+ডাক-পক্ষে শুধু `meta` দিলেই চলে, ডিফল্ট বাক্যের পুনরাবৃত্তি এড়ানো যায়।
 
 ### একাধিক ভাষা একসাথে নিবন্ধন করুন [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-ভাষা কোড স্বাভাবিককরণ করা হয় না। `"en"` ও `"en-US"` আলাদা কী হিসেবে গণ্য হয় বলে, প্রয়োজনীয় কোড স্পষ্টভাবে নিবন্ধন করুন।
+ভাষা কোড স্বাভাবিককরণ করা হয় না। `"en"` ও `"en-US"` আলাদা কী, তাই প্রয়োজনীয় কোড স্পষ্টভাবে নিবন্ধন করুন।

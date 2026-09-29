@@ -3,7 +3,7 @@ title: i18n-error-base
 description: מחלקת בסיס ל-Error המחליפה הודעות שגיאה בהתאם להגדרת השפה של Valibot.
 ---
 
-מחלקת בסיס לירושת `Error`, המחליפה באופן דינמי את `message` בהתאם להגדרת השפה הגלובלית (`lang`) של Valibot.
+מחלקת בסיס ל-`Error` המחליפה את `message` עם `lang` של Valibot.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -23,45 +23,44 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Resource not found: user
 ```
 
-מכיוון ש-`lang` העדכני נקרא בכל גישה ל-`message`, ניתן להחליף שפה ללא יצירה מחדש של המופע. עבור שפה שלא נרשמה, מתבצעת נפילה חזרה (fallback) להודעת ברירת המחדל שהועברה לקונסטרקטור.
+`message` מתייחס ל-`lang` בכל קריאה. מחליפים ללא יצירה מחדש. שפות לא רשומות משתמשות בברירת המחדל של הקונסטרקטור.
 
 ## תכונות [#features]
 
-- פותר את `message` באופן דינמי בשילוב עם `getGlobalConfig()` / `setGlobalConfig({ lang })` של Valibot
-- הודעות לכל שפה נרשמות לאחר מכן באמצעות `setErrorMessage`. ניתן לרשום גם פונקציה המקבלת `meta`
-- עבור שפה שלא נרשמה, מתבצע fallback להודעת ברירת המחדל של הקונסטרקטור
-- ניתן להוסיף תחילית לתחילת ההודעה באמצעות `static prefix` ברמת המחלקה
-- שומר את `meta` בקונסטרקטור ומעביר אותו לפונקציית יצירת ההודעה
-- מכיוון שהמחלקה יורשת מ-`Error`, ניתן להשתמש כמות שהם ב-`instanceof Error`, ב-`cause` וב-`stack`
-- ההודעות נשמרות ב-`WeakMap`, ולכן מחלקות שאינן נחוצות עוד עוברות garbage collection
+- פותר את `message` באופן דינמי עם `setGlobalConfig({ lang })` של Valibot
+- רושמים הודעות לכל שפה לאחר מכן עם `setErrorMessage`. גם פונקציה המקבלת `meta` מותרת
+- שפות לא רשומות משתמשות בברירת המחדל של הקונסטרקטור
+- מוסיף תחילית דרך `static prefix` לכל מחלקה
+- שומר את `meta` ומעביר אותו לפונקציות יצירת ההודעה
+- `instanceof Error`, `cause` ו-`stack` עובדים כרגיל
 
 ## מבנה [#structure]
 
 <CardGroup cols={2}>
   <Card title="התקנה" href="/he/installation" icon="download">
-    הוספת החבילה ותלות ה-peer מול Valibot.
+    הוספת החבילה ותלות ה-peer.
   </Card>
   <Card title="שימוש" href="/he/usage" icon="book-open">
-    פעולות בסיסיות מהגדרת מחלקה ועד החלפת שפה, prefix ו-fallback.
+    מהגדרת מחלקה עד החלפת שפה, prefix ו-fallback.
   </Card>
   <Card title="ייחוס API" href="/he/api" icon="code">
-    המפרט של `I18nErrorBase` ושל `setErrorMessage` והטיפוסים הקשורים.
+    המפרט של `I18nErrorBase` ושל `setErrorMessage`.
   </Card>
 </CardGroup>
 
 ## איך זה עובד [#how-it-works]
 
-הקונסטרקטור של `I18nErrorBase` מגדיר את `message` כ-getter. בכל גישה הוא נפתר לפי הסדר הבא.
+`message` נפתר בסדר הבא בכל קריאה.
 
-1. מקבל את `lang` מתוך `getGlobalConfig()`. אם לא הוגדר, ברירת המחדל היא `"en"`
-2. אם קיימת פונקציה שנרשמה באמצעות `setErrorMessage` עבור (מחלקה × `lang`), מפעיל אותה עם `meta`
-3. אם לא, מחזיר את המחרוזת שהועברה לקונסטרקטור או את תוצאת הפונקציה (הודעת ברירת המחדל)
-4. אם הוגדר `static prefix`, משרשר אותו לתחילת ההודעה
+1. מקבל את `lang` מתוך `getGlobalConfig()`. אם לא הוגדר, `"en"`
+2. אם קיים רישום (מחלקה × `lang`), מפעיל אותו עם `meta`
+3. אחרת, מחזיר את ברירת המחדל של הקונסטרקטור
+4. אם הוגדר `static prefix`, מוסיף אותו בהתחלה
 
 :::tip
-צורת הפונקציה של הודעת ברירת המחדל מוערכת בגישה הראשונה ומאז נשמרת במטמון. הודעות של שפות רשומות נוצרות מחדש מ-`meta` בכל גישה, ולכן החלפת השפה משתקפת באופן מיידי.
+הודעות רשומות נוצרות מחדש מ-`meta` בכל קריאה, ולכן ההחלפה מיידית.
 :::
 
 ## הצעדים הבאים [#next-steps]
 
-התחילו מ[התקנה](/he/installation), ובדקו את התהליך המלא ב[שימוש](/he/usage). פרטי הטיפוסים והפרמטרים מרוכזים ב[ייחוס API](/he/api).
+התחילו מ[התקנה](/he/installation), ובדקו את התהליך ב[שימוש](/he/usage). פרטים ב[ייחוס API](/he/api).

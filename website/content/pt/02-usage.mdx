@@ -7,13 +7,13 @@ description: Operações básicas de definição de classes de erro, registo de 
 
 <Steps>
   <Step title="Definir a classe de erro">
-    Herdar de `I18nErrorBase<TMeta>` e definir em `TMeta` a informação a utilizar na geração de mensagens.
+    Herde de `I18nErrorBase<TMeta>` e defina em `TMeta` a informação para gerar mensagens.
   </Step>
   <Step title="Registar as mensagens de cada idioma">
-    Registar com `setErrorMessage` as mensagens correspondentes à classe e ao idioma.
+    Registe com `setErrorMessage` as mensagens correspondentes à classe e ao idioma.
   </Step>
   <Step title="Mudar de idioma e ler message">
-    Mudar com `setGlobalConfig({ lang })` do Valibot e aceder a `error.message`.
+    Mude com `setGlobalConfig({ lang })` e leia `error.message`.
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## Definir a classe de erro [#define-error-class]
 
-`TMeta` é o tipo da informação auxiliar utilizada na geração de mensagens. É guardado como `error.meta` e também é passado à função de `setErrorMessage`.
+`TMeta` é informação auxiliar para gerar mensagens. É guardada como `error.meta` e passada às funções registadas.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-O segundo argumento do construtor é uma cadeia de caracteres ou uma função `(meta) => string`. No terceiro argumento podem ser passadas opções iguais às de `Error`, como `{ cause }`.
+O segundo argumento é uma cadeia de caracteres ou uma função `(meta) => string`. O terceiro aceita `{ cause }` e outras opções de `Error`.
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-Não se destina a fazer diretamente `new` de `I18nErrorBase`. Crie sempre uma classe concreta herdada para utilizar. Como o destino do registo de mensagens é distinguido por unidade de construtor (`this.constructor`), uma mensagem registada na classe progenitora não é herdada pela classe descendente.
+Não faça `new` direto; herde sempre. Os registos são por classe, por isso os do pai não são herdados pelos filhos.
 :::
 
 ## Registar mensagens [#register-message]
 
-`setErrorMessage` regista a função de criação de mensagens para uma classe e um idioma.
+`setErrorMessage` regista funções de criação por classe e idioma.
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-Se for passada uma cadeia de caracteres, é convertida internamente em `() => text`. O idioma também pode ser indicado como um vetor de cadeias de caracteres.
+Cadeias de caracteres também são aceites. Os idiomas podem ser indicados como vetores.
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-Voltar a registar a mesma classe e o mesmo idioma substitui o registo. Independentemente da avaliação de `instanceof`, o conteúdo registado só é utilizado quando o construtor do momento do registo e o do momento da consulta são idênticos.
+Voltar a registar a mesma classe e idioma substitui. Só se aplica quando os construtores de registo e de consulta coincidem, não por `instanceof`.
 
 :::warning[Atenção ao acesso antes do registo]
-A forma de função da mensagem por omissão é avaliada no primeiro acesso e guardada em cache. Se ler `message` num idioma sem registo antes de `setErrorMessage`, esse valor por omissão fica fixado. Por princípio, registe as mensagens de cada idioma antes de criar instâncias.
+Ler `message` antes fixa o valor por omissão. Registe antes de criar instâncias.
 :::
 
 ## Mudar de idioma [#switch-language]
 
-O idioma é mudado na configuração global do Valibot. A `message` consulta o `lang` atual em cada acesso.
+O idioma muda-se na configuração global do Valibot. A `message` consulta o `lang` atual em cada acesso.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-A predefinição de `lang` quando não está definido é `"en"`. Se for pedido um idioma sem registo, recorre-se à mensagem por omissão passada ao construtor.
+Sem `lang` definido, é `"en"`. Idiomas sem registo usam a mensagem por omissão do construtor.
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## Adicionar um prefixo [#prefix]
 
-Se definir `static prefix` na classe, é concatenado no início da mensagem resolvida. Aplica-se tanto às mensagens traduzidas como às mensagens por omissão.
+`static prefix` é anteposto à mensagem resolvida. Aplica-se tanto às traduzidas como à mensagem por omissão.
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-Se não for definido, é devolvido como está, sem prefixo.
+Se não for definido, é devolvido como está.
 
 ## Comportamento como Error [#error-behavior]
 
-- `error instanceof Error`, `instanceof I18nErrorBase` e `instanceof` da classe concreta são todos `true`
-- `message` é enumerável (está incluído em `Object.keys(error)`)
-- `String(error)` / `error.toString()` incluem a mensagem resolvida (ex.: `"Error: ..."`)
-- `cause` é guardado com `new TestError(meta, message, { cause })`. Como polyfill para ambientes de execução antigos, está incluído um tratamento que atribui `options.cause` quando `cause` não é suportado
+- `error instanceof Error`, `instanceof I18nErrorBase` e `instanceof` da classe concreta são todos `true`.
+- `String(error)` / `error.toString()` incluem a mensagem resolvida (ex.: `"Error: ..."`).
+- `cause` é guardado com `{ cause }`.
 
 ## Padrões comuns [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-Quem chama só precisa de ter em conta o `meta`, evitando a duplicação do texto por omissão (aqui, em inglês).
+Quem chama só passa `meta`, evitando duplicar o texto por omissão.
 
 ### Registar vários idiomas em conjunto [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-Os códigos de idioma não são normalizados. `"en"` e `"en-US"` são tratados como chaves distintas, pelo que os códigos necessários devem ser registados explicitamente.
+Os códigos de idioma não são normalizados. `"en"` e `"en-US"` são chaves distintas, por isso registe explicitamente os códigos necessários.

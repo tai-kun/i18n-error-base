@@ -5,7 +5,7 @@ description: Spezifikation von I18nErrorBase, setErrorMessage und der zugehörig
 
 ## `I18nErrorBase` [#i18n-error-base]
 
-Die Basisklasse zur Erweiterung von `Error`. Sie definiert `message` als Getter neu und löst es dynamisch anhand von `lang` aus Valibot auf.
+Die Basisklasse zur Erweiterung von `Error`. `message` wird entsprechend `lang` aufgelöst.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -17,21 +17,21 @@ class MyError extends I18nErrorBase<{ code: string }> {}
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Der Typ der Zusatzinformationen, die als `meta` gespeichert werden. Geben Sie `undefined` an, wenn Sie sie nicht verwenden. |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Der Typ von `meta`. Geben Sie `undefined` an, wenn Sie ihn nicht verwenden. |
 
 ### Statische Eigenschaften [#static-props]
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `prefix?` | `string` | `undefined` | Wenn gesetzt, wird es am Anfang der aufgelösten Nachricht verkettet. |
+| `prefix?` | `string` | `undefined` | Wird dem aufgelösten Nachrichtenanfang vorangestellt. |
 
 ### Instanzeigenschaften [#instance-props]
 
 | Prop | Type | Description |
 | ---- | ---- | ----------- |
-| `meta` | `TMeta` | Die im Konstruktor übergebenen Zusatzinformationen. Lesbar und schreibbar. |
-| `message` | `string` | Die entsprechend dem aktuellen `lang` aufgelöste Nachricht. Aufzählbar. |
-| `cause` | `unknown` | Die über `ErrorOptions` übergebene Ursache. Eine Standard-Eigenschaft von `Error`. |
+| `meta` | `TMeta` | Zusatzinformationen des Konstruktors. Lesbar und schreibbar. |
+| `message` | `string` | Wird entsprechend `lang` aufgelöst. Aufzählbar. |
+| `cause` | `unknown` | Die Ursache aus `ErrorOptions`. Eine Standard-Eigenschaft von `Error`. |
 
 ### Konstruktor [#constructor]
 
@@ -50,26 +50,24 @@ new MyError(meta, message, options?)
 
 | Parameter | Typ | Beschreibung |
 | --------- | --- | ------------ |
-| `meta` | `TMeta` | Die zur Nachrichtenerzeugung verwendeten Zusatzinformationen. |
-| `message` | `string \| MessageFactory<TMeta>` | Die Standardnachricht für Sprachen ohne Registrierung. Wenn es eine Funktion ist, erhält sie `meta`. |
-| `options` | `ErrorOptions` | Optionen, die mit dem zweiten Argument von `Error` kompatibel sind (z. B. `{ cause }`). |
-
-Wenn als `message` ein Nicht-Zeichenkettenwert (z. B. eine Zahl) übergeben wird, wird er mit `String(...)` in eine Zeichenkette umgewandelt. Wenn eine Nachrichtenfabrik eine leere Zeichenkette zurückgibt, ist auch `message` eine leere Zeichenkette.
+| `meta` | `TMeta` | Zusatzinformationen zur Nachrichtenerzeugung. |
+| `message` | `string \| MessageFactory<TMeta>` | Standardnachricht für Sprachen ohne Registrierung. Funktionen erhalten `meta`. |
+| `options` | `ErrorOptions` | Optionen, kompatibel mit dem zweiten Argument von `Error` (z. B. `{ cause }`). |
 
 ### Auflösungsreihenfolge [#resolution-order]
 
-1. Holt `lang` aus `getGlobalConfig()` (wenn nicht gesetzt, `"en"`)
-2. Führt die mit `setErrorMessage` für diese Klasse und Sprache registrierte Funktion mit `meta` aus
-3. Wenn nicht registriert, wird die Standardnachricht des Konstruktors verwendet (Zeichenkette oder ausgewertetes Funktionsergebnis; nach der ersten Auswertung zwischengespeichert)
-4. Falls `static prefix` vorhanden ist, wird es am Anfang verkettet
+1. Holt `lang` aus `getGlobalConfig()` (wenn nicht gesetzt, `"en"`).
+2. Führt die registrierte Funktion für diese Klasse und Sprache mit `meta` aus.
+3. Wenn nicht registriert, wird die Standardnachricht verwendet.
+4. Falls `static prefix` gesetzt ist, wird es vorangestellt.
 
 :::note
-Der Abgleich von Registrierungen erfolgt per strikter Gleichheit von `this.constructor`. Registrierungen auf einer Elternklasse werden nicht an Unterklassen vererbt. Registrieren Sie jede benötigte Klasse einzeln.
+Registrierungen werden pro Klasse unterschieden. Eltern-Registrierungen werden nicht vererbt. Registrieren Sie jede Klasse.
 :::
 
 ## `setErrorMessage` [#set-error-message]
 
-Registriert eine Nachrichtenerzeugungsfunktion pro Sprache.
+Registriert Nachrichtenerzeugungsfunktionen pro Sprache.
 
 ```ts
 import { setErrorMessage } from "i18n-error-base";
@@ -80,10 +78,10 @@ setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
 | Parameter | Typ | Beschreibung |
 | --------- | --- | ------------ |
 | `reference` | `I18nErrorBaseConstructor` | Eine Klasse, die `I18nErrorBase` erweitert. Klassen ohne diese Vererbung führen zu einem Typfehler. |
-| `message` | `string \| (meta) => string` | Die zu registrierende Nachricht. Der Typ von `meta` wird aus dem `meta` der Zielklasse abgeleitet. |
-| `lang` | `string \| Iterable<string>` | Die Zielsprache. Ein einzelner Code oder ein iterierbares Objekt aus Codes (z. B. ein Array). |
+| `message` | `string \| (meta) => string` | Die zu registrierende Nachricht. Der Typ von `meta` wird aus der Zielklasse abgeleitet. |
+| `lang` | `string \| Iterable<string>` | Die Zielsprache. Ein einzelner Code oder ein iterierbares Objekt (z. B. ein Array). |
 
-Zeichenketten werden intern vor der Speicherung in Funktionen umgewandelt. Eine erneute Registrierung derselben Klasse und Sprache überschreibt den Eintrag. Die Daten werden in der `WeakMap` unter `globalThis.i18n_error_base__message_map` gespeichert, mit der Klasse als Schlüssel und einer `Map` von Sprache zu Funktion als Wert.
+Eine erneute Registrierung derselben Klasse und Sprache überschreibt den Eintrag.
 
 ## Typen [#types]
 
@@ -95,7 +93,7 @@ type ErrorMeta = {
 };
 ```
 
-Die Standard-Einschränkung für `TMeta`. Stellt ein schreibgeschütztes Objekt mit beliebigen Eigenschaften dar.
+Die Standard-Einschränkung für `TMeta`. Ein schreibgeschütztes Objekt mit beliebigen Eigenschaften.
 
 ### `ErrorOptions` [#error-options]
 
@@ -109,7 +107,7 @@ type ErrorOptions =
     : { readonly cause?: unknown };
 ```
 
-Ein Typ, der vom zweiten Argument des `Error`-Konstruktors der Laufzeitumgebung abgeleitet ist. Es können Optionen einschließlich `cause` übergeben werden. Der letztere Zweig ist ein Fallback für ältere Umgebungen.
+Ein vom zweiten Argument von `Error` abgeleiteter Typ. Es kann `cause` übergeben werden.
 
 ### `MessageFactory<TMeta>` [#message-factory]
 
@@ -119,11 +117,11 @@ interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 }
 ```
 
-Eine Funktion, die aus `meta` eine Nachricht erzeugt. Sie kann sowohl für die Standardnachricht des Konstruktors als auch für mit `setErrorMessage` registrierte Werte verwendet werden.
+Eine Funktion, die aus `meta` eine Nachricht erzeugt. Wird sowohl für Standard- als auch für registrierte Nachrichten verwendet.
 
 ### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
 
-Ein Typ, der die Überladungen der Konstruktorargumente darstellt.
+Konstruktorargument-Überladungen.
 
 ```ts
 type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
@@ -144,10 +142,9 @@ interface I18nErrorBaseConstructor {
 }
 ```
 
-Der Typ des ersten Arguments von `setErrorMessage`. Durch ein internes Identifizierungssymbol wird auf Typebene verhindert, dass Klassen ohne Vererbung von `I18nErrorBase` eingeschleust werden.
+Der Typ des ersten Arguments von `setErrorMessage`.
 
 ## Hinweise [#notes]
 
-- Der Standardwert von `lang`, der zur Auflösung von `message` verwendet wird, lautet `"en"`. Wechseln Sie ihn explizit mit `setGlobalConfig({ lang })`
-- Es gibt weder eine Normalisierung von Sprachcodes noch eine Fallback-Kette (z. B. Rückfall von `en-US` auf `en`). Nicht registrierte Sprachen ergeben einheitlich die Standardnachricht
-- Registrierungsdaten werden in einer prozessweiten `WeakMap` gespeichert. Um Tests zu isolieren, verwerfen Sie sie mit `globalThis.i18n_error_base__message_map = undefined`
+- Der Standardwert von `lang` lautet `"en"`. Wechseln Sie ihn mit `setGlobalConfig({ lang })`.
+- Es gibt weder eine Normalisierung von Sprachcodes noch eine Fallback-Kette (z. B. `en-US` → `en`). Nicht registrierte Sprachen ergeben die Standardnachricht.

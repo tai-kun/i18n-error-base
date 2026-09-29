@@ -7,13 +7,13 @@ description: Osnovne operacije definiranja klase pogreške, registracije poruka,
 
 <Steps>
   <Step title="Definiranje klase pogreške">
-    Naslijedite `I18nErrorBase<TMeta>` i definirajte informacije koje želite koristiti za generiranje poruke kao `TMeta`.
+    Naslijedite `I18nErrorBase<TMeta>` i definirajte info za generiranje poruke u `TMeta`.
   </Step>
   <Step title="Registracija poruka za svaki jezik">
-    Pomoću `setErrorMessage` registrirajte poruku koja odgovara klasi i jeziku.
+    Registrirajte poruku za klasu i jezik pomoću `setErrorMessage`.
   </Step>
   <Step title="Prebacivanje jezika i čitanje poruke message">
-    Prebacite pomoću Valibot metode `setGlobalConfig({ lang })` i pristupite `error.message`.
+    Prebacite s `setGlobalConfig({ lang })` i pročitajte `error.message`.
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## Definiranje klase pogreške [#define-error-class]
 
-`TMeta` je tip pratećih informacija koje se koriste za generiranje poruke. Čuva se kao `error.meta` i prosljeđuje funkciji u `setErrorMessage`.
+`TMeta` je pomoćna info za generiranje poruke. Čuva se u `error.meta` i prosljeđuje registriranim funkcijama.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-Drugi argument konstruktora je string ili funkcija `(meta) => string`. Kao treći argument mogu se proslijediti opcije poput `{ cause }`, isto kao kod `Error`.
+Drugi argument je string ili funkcija `(meta) => string`. Treći je `{ cause }` i druge `Error` opcije.
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -65,7 +65,7 @@ const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
 console.log(error.cause === cause); // true
 ```
 
-Ako je `TMeta` postavljen na `undefined`, `meta` se može izostaviti.
+Ako je `TMeta` `undefined`, `meta` se može izostaviti.
 
 ```ts
 class NoMetaError extends I18nErrorBase<undefined> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-`I18nErrorBase` nije predviđen za izravno instanciranje pomoću `new`. Obavezno stvorite i koristite konkretnu izvedenu klasu. Budući da se odredište registracije poruka razlikuje po konstruktoru (`this.constructor`), poruka registrirana na roditeljskoj klasi ne nasljeđuje se na podređenu klasu.
+Ne koristite `new` izravno; uvijek nasljeđujte. Registracije su po klasi, pa se roditeljske ne nasljeđuju na djecu.
 :::
 
 ## Registracija poruke [#register-message]
 
-`setErrorMessage` registrira funkciju za izradu poruke za klasu i jezik.
+`setErrorMessage` registrira tvorničke funkcije po klasi i jeziku.
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-Ako se proslijedi string, interno se pretvara u `() => text`. Jezik se može navesti i kao polje stringova.
+Stringovi su također dopušteni. Jezici se mogu zadati kao polje.
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-Ponovna registracija za istu klasu i jezik prepisuje prethodnu vrijednost. Registrirani sadržaj koristi se samo kada su konstruktor pri registraciji i konstruktor pri referenciranju identični, neovisno o procjeni `instanceof`.
+Ponovna registracija iste klase i jezika prepisuje. Vrijedi samo kad se konstruktori pri registraciji i traženju podudaraju, ne putem `instanceof`.
 
 :::warning[Pozor na pristup prije registracije]
-Funkcijski oblik zadane poruke procjenjuje se pri prvom pristupu i sprema u predmemoriju. Ako se `message` pročita na neregistriranom jeziku prije `setErrorMessage`, ta zadana vrijednost se fiksira. Poruke za svaki jezik u načelu registrirajte prije stvaranja instance.
+Prvo čitanje `message` fiksira zadanu vrijednost. Registrirajte prije stvaranja instanci.
 :::
 
 ## Prebacivanje jezika [#switch-language]
 
-Jezik se prebacuje Valibot globalnom postavkom. `message` pri svakom pristupu referencira trenutni `lang`.
+Prebacite Valibot globalnom postavkom. `message` se pri svakom čitanju odnosi na trenutni `lang`.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-Zadana vrijednost kada `lang` nije postavljen je `"en"`. Ako se zatraži neregistrirani jezik, koristi se zadana poruka predana konstruktoru.
+Nepostavljeni `lang` je `"en"`. Neregistrirani jezici koriste zadanu poruku iz konstruktora.
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## Dodavanje prefiksa [#prefix]
 
-Ako se na klasi postavi `static prefix`, dodaje se na početak razriješene poruke. Primjenjuje se i na prevedenu poruku i na zadanu poruku.
+`static prefix` dodaje se na početak razriješene poruke. Vrijedi i za prevedene i za zadane poruke.
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-Ako se ne postavi, vraća se izravno bez prefiksa.
+Kad nije postavljen, vraća se kakav jest.
 
 ## Ponašanje kao Error [#error-behavior]
 
-- I `error instanceof Error`, i `instanceof I18nErrorBase`, i `instanceof konkretne klase` imaju vrijednost `true`
-- `message` se može nabrojiti (uključen je u `Object.keys(error)`)
+- I `error instanceof Error`, i `instanceof I18nErrorBase`, i `instanceof` konkretne klase su `true`
 - `String(error)` / `error.toString()` uključuju razriješenu poruku (npr. `"Error: ..."`)
-- `cause` se čuva pomoću `new TestError(meta, message, { cause })`. Kao polifil za starija izvršna okruženja, uključena je obrada koja dodjeljuje `options.cause` kada `cause` nije podržan
+- `cause` se čuva putem `{ cause }`
 
 ## Uobičajeni obrasci [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-Pozivatelj treba voditi računa samo o `meta`, pa se izbjegava dupliciranje zadane rečenice (ovdje na engleskom).
+Pozivatelj prosljeđuje samo `meta`, pa se izbjegava dupliciranje zadanog teksta.
 
 ### Skupna registracija više jezika [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-Jezični kodovi se ne normaliziraju. `"en"` i `"en-US"` tretiraju se kao različiti ključevi, pa potrebne kodove registrirajte izričito.
+Jezični kodovi se ne normaliziraju. `"en"` i `"en-US"` su zasebni ključevi, pa potrebne kodove registrirajte izričito.

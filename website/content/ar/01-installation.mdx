@@ -8,7 +8,7 @@ description: طريقة تثبيت i18n-error-base ومتطلبات تشغيله
 - بيئة تنفيذ قادرة على التعامل مع وحدات ES مثل Node.js
 - يلزم `valibot@^1.0.0` كاعتمادية نظير
 
-يرجع `I18nErrorBase` داخليًا إلى `getGlobalConfig()` في Valibot للحصول على `lang` الحالية. وحتى في المشاريع التي لا تستخدم Valibot، يكفي استدعاء `setGlobalConfig({ lang })` لغرض تبديل اللغة لكي يعمل.
+`message` تتبع `lang` من `getGlobalConfig()` في Valibot.
 
 ## التثبيت [#installation]
 
@@ -23,7 +23,7 @@ npm i valibot
 ```
 
 :::warning[تنبيه بشأن اعتمادية النظير]
-لا تُضمِّن `i18n-error-base` الحزمة `valibot`. فإذا لم يوفِّر المشروع المضيف `valibot@^1.0.0`، فسيفشل حلّ الاستيراد.
+`valibot` غير مضمّنة. بدون `valibot@^1.0.0` يفشل حلّ الاستيراد.
 :::
 
 ## الاستيراد [#import]
@@ -33,17 +33,6 @@ import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
 import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
 ```
 
-يتوفر أيضًا تصدير افتراضي.
-
-```ts
-import I18nErrorBase from "i18n-error-base";
-import setErrorMessage from "i18n-error-base";
-```
-
-:::note
-تُوزَّع الحزمة بصيغة ESM (`"type": "module"`) دون آثار جانبية (`"sideEffects": false`). وتُحَلّ تعريفات الأنواع من `dist/src/*.d.ts`.
-:::
-
 ## الخطوات التالية [#next-steps]
 
-راجع [الاستخدام](/ar/usage) للتحقق من تعريف فئة الخطأ وأساسيات تبديل اللغة.
+راجع [الاستخدام](/ar/usage) للأساسيات.

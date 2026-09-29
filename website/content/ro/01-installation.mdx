@@ -8,7 +8,7 @@ description: Cum se instalează i18n-error-base și cerințele de funcționare.
 - Un mediu de execuție care poate gestiona module ES, cum ar fi Node.js
 - `valibot@^1.0.0` este necesar ca dependență peer
 
-`I18nErrorBase` consultă intern `getGlobalConfig()` din Valibot pentru a obține `lang` curent. Chiar și în proiectele care nu folosesc Valibot, este suficient să apelați `setGlobalConfig({ lang })` doar pentru comutarea limbii.
+`message` urmează `lang` din `getGlobalConfig()` al Valibot.
 
 ## Instalare [#installation]
 
@@ -23,7 +23,7 @@ npm i valibot
 ```
 
 :::warning[Atenție la dependența peer]
-`i18n-error-base` nu include `valibot`. Dacă proiectul gazdă nu furnizează `valibot@^1.0.0`, importul va eșua la rezolvare.
+`valibot` nu este inclus. Fără `valibot@^1.0.0`, importul nu se rezolvă.
 :::
 
 ## Import [#import]
@@ -33,17 +33,6 @@ import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
 import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
 ```
 
-Este disponibil și un export implicit.
-
-```ts
-import I18nErrorBase from "i18n-error-base";
-import setErrorMessage from "i18n-error-base";
-```
-
-:::note
-Pachetul este distribuit ca ESM (`"type": "module"`) fără efecte secundare (`"sideEffects": false`). Definițiile de tipuri sunt rezolvate din `dist/src/*.d.ts`.
-:::
-
 ## Pașii următori [#next-steps]
 
-Consultați [Utilizarea](/ro/usage) pentru definirea unei clase de eroare și noțiunile de bază ale comutării limbii.
+Definirea și comutarea sunt prezentate în [Utilizare](/ro/usage).

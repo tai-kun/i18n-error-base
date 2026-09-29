@@ -8,7 +8,7 @@ description: i18n-error-base-paketin asennustapa ja toimintaedellytykset.
 - Suoritusympäristö, joka tukee ES-moduuleja, kuten Node.js
 - Vertaisriippuvuutena tarvitaan `valibot@^1.0.0`
 
-`I18nErrorBase` viittaa sisäisesti Valibotin `getGlobalConfig()`-funktioon ja hakee senhetkisen `lang`-arvon. Se toimii myös projekteissa, jotka eivät muuten käytä Valibotia, kunhan kielen vaihtamiseen kutsutaan `setGlobalConfig({ lang })`.
+`message` noudattaa Valibotin `getGlobalConfig()`-funktion `lang`-arvoa.
 
 ## Asennus [#installation]
 
@@ -23,7 +23,7 @@ npm i valibot
 ```
 
 :::warning[Huomio vertaisriippuvuudesta]
-`i18n-error-base` ei sisällä `valibot`-pakettia. Jos isäntäprojektissa ei ole `valibot@^1.0.0`-pakettia, tuonti epäonnistuu selvitysvirheeseen.
+`valibot`-pakettia ei niputeta. Ilman `valibot@^1.0.0`-pakettia tuonti epäonnistuu selvitysvirheeseen.
 :::
 
 ## Tuonti [#import]
@@ -33,17 +33,6 @@ import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
 import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
 ```
 
-Myös oletusvienti on tarjolla.
-
-```ts
-import I18nErrorBase from "i18n-error-base";
-import setErrorMessage from "i18n-error-base";
-```
-
-:::note
-Paketti jaetaan ESM-muodossa (`"type": "module"`), eikä sillä ole sivuvaikutuksia (`"sideEffects": false`). Tyyppimääritykset ratkaistaan polusta `dist/src/*.d.ts`.
-:::
-
 ## Seuraavat vaiheet [#next-steps]
 
-Katso [käyttöohjeesta](/fi/usage), miten virheluokka määritetään ja kielen vaihtamisen perusteet.
+Katso [käyttöohjeesta](/fi/usage) määrittämisen ja kielen vaihtamisen perusteet.

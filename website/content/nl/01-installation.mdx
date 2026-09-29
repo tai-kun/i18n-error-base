@@ -8,7 +8,7 @@ description: Zo installeer je i18n-error-base en wat de systeemvereisten zijn.
 - Een runtime die ES-modules kan verwerken, zoals Node.js
 - `valibot@^1.0.0` is vereist als peer-afhankelijkheid
 
-`I18nErrorBase` verwijst intern naar Valibot's `getGlobalConfig()` om de huidige `lang` op te halen. Zelfs in projecten die Valibot verder niet gebruiken, volstaat het om `setGlobalConfig({ lang })` aan te roepen puur om van taal te wisselen.
+`message` volgt `lang` uit Valibot's `getGlobalConfig()`.
 
 ## Installatie [#installation]
 
@@ -23,7 +23,7 @@ npm i valibot
 ```
 
 :::warning[Let op de peer-afhankelijkheid]
-`i18n-error-base` bundelt `valibot` niet. Als de host geen `valibot@^1.0.0` levert, mislukt de resolutie van de import.
+`valibot` wordt niet gebundeld. Zonder `valibot@^1.0.0` mislukt de resolutie van de import.
 :::
 
 ## Importeren [#import]
@@ -33,17 +33,6 @@ import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
 import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
 ```
 
-Er is ook een default-export beschikbaar.
-
-```ts
-import I18nErrorBase from "i18n-error-base";
-import setErrorMessage from "i18n-error-base";
-```
-
-:::note
-Het pakket wordt als ESM (`"type": "module"`) gedistribueerd en heeft geen bijwerkingen (`"sideEffects": false`). Typedefinities worden uit `dist/src/*.d.ts` opgelost.
-:::
-
 ## Volgende stappen [#next-steps]
 
-Bekijk in [Gebruik](/nl/usage) hoe je een foutklasse definieert en de basis van het wisselen van taal.
+Bekijk in [Gebruik](/nl/usage) de basis van definiëren en wisselen van taal.

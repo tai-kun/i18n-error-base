@@ -3,7 +3,7 @@ title: i18n-error-base
 description: A base Error class that switches error messages in sync with Valibot's locale setting.
 ---
 
-A base class for extending `Error` that dynamically switches `message` in sync with Valibot's global locale setting (`lang`).
+An `Error` base class that switches `message` with Valibot's `lang`.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -23,45 +23,44 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Resource not found: user
 ```
 
-Because the current `lang` is resolved each time `message` is accessed, you can switch languages without recreating instances. For languages with no registered message, it falls back to the default message passed to the constructor.
+`message` refers to `lang` on each read. Switch without recreating instances. Unregistered languages use the constructor's default message.
 
 ## Features [#features]
 
-- Resolves `message` dynamically in sync with Valibot's `getGlobalConfig()` / `setGlobalConfig({ lang })`
-- Register per-language messages later with `setErrorMessage`. You can also register functions that receive `meta`
-- Falls back to the constructor's default message for languages with no registration
-- Adds a prefix to the beginning of the message via a per-class `static prefix`
-- Keeps `meta` in the constructor and passes it to message factory functions
-- Inherits from `Error`, so `instanceof Error`, `cause`, and `stack` work as usual
-- Stores messages in a `WeakMap`, so unreferenced classes can be garbage collected
+- Resolves `message` dynamically with Valibot's `setGlobalConfig({ lang })`
+- Register per-language messages later with `setErrorMessage`. Functions receiving `meta` are also allowed
+- Unregistered languages use the constructor's default message
+- Adds a prefix via per-class `static prefix`
+- Keeps `meta` and passes it to message factory functions
+- `instanceof Error`, `cause`, and `stack` work as usual
 
 ## Structure [#structure]
 
 <CardGroup cols={2}>
   <Card title="Installation" href="/en/installation" icon="download">
-    Adding the package and the peer dependency on Valibot.
+    How to add the package and its peer dependency.
   </Card>
   <Card title="Usage" href="/en/usage" icon="book-open">
-    Basic operations from defining classes to switching languages, prefixes, and fallback.
+    From definition to switching, prefix, and fallback.
   </Card>
   <Card title="API Reference" href="/en/api" icon="code">
-    Specifications for `I18nErrorBase` and `setErrorMessage`, and related types.
+    Specs for `I18nErrorBase` and `setErrorMessage`.
   </Card>
 </CardGroup>
 
 ## How it works [#how-it-works]
 
-The `I18nErrorBase` constructor defines `message` as a getter. It is resolved in the following order on each access.
+`message` resolves in the following order on each read.
 
-1. Get `lang` from `getGlobalConfig()`. It is `"en"` when unset
-2. If a `(class × lang)` function registered with `setErrorMessage` exists, run it with `meta`
-3. Otherwise, return the default message passed to the constructor (a string or the result of a function)
-4. If `static prefix` is set, prepend it to the beginning
+1. Get `lang` from `getGlobalConfig()`. `"en"` when unset
+2. If a `(class × lang)` registration exists, run it with `meta`
+3. Otherwise, return the constructor's default message
+4. If `static prefix` is set, prepend it
 
 :::tip
-The function form of the default message is evaluated on first access and cached thereafter. Messages for registered languages are regenerated from `meta` on each access, so language switches take effect immediately.
+Registered messages are generated from `meta` on each read, so switches take effect immediately.
 :::
 
 ## Next steps [#next-steps]
 
-Start with [Installation](/en/installation), then walk through the full flow in [Usage](/en/usage). Type and argument details are covered in the [API Reference](/en/api).
+Start with [Installation](/en/installation), then see the flow in [Usage](/en/usage). Details are in the [API Reference](/en/api).

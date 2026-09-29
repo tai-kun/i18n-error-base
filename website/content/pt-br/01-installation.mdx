@@ -5,10 +5,10 @@ description: Como instalar o i18n-error-base e os requisitos de funcionamento.
 
 ## Requisitos [#requirements]
 
-- Um ambiente de execução onde você consiga usar módulos ES, como Node.js
-- `valibot@^1.0.0` como dependência peer
+- Um ambiente de execução onde você consiga usar módulos ES, como Node.js.
+- `valibot@^1.0.0` como dependência peer.
 
-`I18nErrorBase` consulta internamente o `getGlobalConfig()` do Valibot para pegar o `lang` atual. Mesmo em um projeto onde você não usa Valibot, basta chamar `setGlobalConfig({ lang })` só para trocar o idioma que já funciona.
+`message` segue o `lang` do `getGlobalConfig()` do Valibot.
 
 ## Instalação [#installation]
 
@@ -23,7 +23,7 @@ npm i valibot
 ```
 
 :::warning[Atenção com a dependência peer]
-`i18n-error-base` não inclui o `valibot`. Se você não tiver `valibot@^1.0.0` no seu projeto, vai dar erro de resolução na hora de importar.
+`valibot` não vem junto. Sem `valibot@^1.0.0`, a importação dá erro de resolução.
 :::
 
 ## Importação [#import]
@@ -33,17 +33,6 @@ import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
 import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
 ```
 
-Também há uma exportação padrão para você usar.
-
-```ts
-import I18nErrorBase from "i18n-error-base";
-import setErrorMessage from "i18n-error-base";
-```
-
-:::note
-O pacote é distribuído como ESM (`"type": "module"`) e não tem efeitos colaterais (`"sideEffects": false`). As definições de tipos são resolvidas a partir de `dist/src/*.d.ts`.
-:::
-
 ## Próximos passos [#next-steps]
 
-Confira os conceitos básicos da definição da classe de erro e da troca de idioma em [uso](/pt-br/usage).
+Confira o básico de definição e troca de idioma em [uso](/pt-br/usage).

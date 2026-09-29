@@ -5,7 +5,7 @@ description: Specifications for I18nErrorBase, setErrorMessage, and related type
 
 ## `I18nErrorBase` [#i18n-error-base]
 
-A base class for extending `Error`. It redefines `message` as a getter and resolves it dynamically based on Valibot's `lang`.
+A base class for extending `Error`. `message` resolves according to `lang`.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -17,25 +17,25 @@ class MyError extends I18nErrorBase<{ code: string }> {}
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | The type of the auxiliary information kept as `meta`. Specify `undefined` when you do not use it. |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | The type of `meta`. Specify `undefined` when unused. |
 
 ### Static properties [#static-props]
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `prefix?` | `string` | `undefined` | When set, it is prepended to the resolved message. |
+| `prefix?` | `string` | `undefined` | Prepended to the resolved message. |
 
 ### Instance properties [#instance-props]
 
 | Prop | Type | Description |
 | ---- | ---- | ----------- |
-| `meta` | `TMeta` | The auxiliary information passed to the constructor. Readable and writable. |
-| `message` | `string` | The message resolved for the current `lang`. Enumerable. |
-| `cause` | `unknown` | The cause passed via `ErrorOptions`. A standard `Error` property. |
+| `meta` | `TMeta` | Constructor auxiliary info. Readable and writable. |
+| `message` | `string` | Resolves according to `lang`. Enumerable. |
+| `cause` | `unknown` | The cause from `ErrorOptions`. A standard `Error` property. |
 
 ### Constructor [#constructor]
 
-When `TMeta` does not include `undefined`, `meta` is required.
+When `TMeta` excludes `undefined`, `meta` is required.
 
 ```ts
 new MyError(meta, message, options?)
@@ -50,26 +50,24 @@ new MyError(meta, message, options?)
 
 | Parameter | Type | Description |
 | --------- | ---- | ----------- |
-| `meta` | `TMeta` | The auxiliary information used for message generation. |
-| `message` | `string \| MessageFactory<TMeta>` | The default message used for languages with no registration. When it is a function, it receives `meta`. |
-| `options` | `ErrorOptions` | Options compatible with the second argument of `Error` (such as `{ cause }`). |
-
-Passing a non-string value (such as a number) as `message` stringifies it with `String(...)`. When a message factory returns an empty string, `message` is also an empty string.
+| `meta` | `TMeta` | Auxiliary info for message generation. |
+| `message` | `string \| MessageFactory<TMeta>` | Default message for unregistered languages. Functions receive `meta`. |
+| `options` | `ErrorOptions` | Options compatible with `Error`'s second argument (e.g. `{ cause }`). |
 
 ### Resolution order [#resolution-order]
 
-1. Get `lang` from `getGlobalConfig()` (`"en"` when unset)
-2. Run the function registered with `setErrorMessage` for that class and language with `meta`
-3. When unregistered, use the constructor's default message (a string or the evaluated result of a function; cached after the first evaluation)
-4. If `static prefix` is set, prepend it to the beginning
+1. Get `lang` from `getGlobalConfig()` (`"en"` when unset).
+2. Run the registered function for that class and language with `meta`.
+3. When unregistered, use the default message.
+4. If `static prefix` is set, prepend it.
 
 :::note
-Registrations are matched by strict equality on `this.constructor`. Registrations on a parent class are not inherited by child classes. Register each class you need.
+Registrations are per-class. Parent registrations are not inherited. Register each class.
 :::
 
 ## `setErrorMessage` [#set-error-message]
 
-Registers a message factory function per language.
+Registers per-language message factory functions.
 
 ```ts
 import { setErrorMessage } from "i18n-error-base";
@@ -79,11 +77,11 @@ setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
 
 | Parameter | Type | Description |
 | --------- | ---- | ----------- |
-| `reference` | `I18nErrorBaseConstructor` | A class extending `I18nErrorBase`. Classes that do not extend it are a type error. |
-| `message` | `string \| (meta) => string` | The message to register. The type of `meta` is inferred from the target class's `meta`. |
-| `lang` | `string \| Iterable<string>` | The target language. A single code or an iterable of codes (such as an array). |
+| `reference` | `I18nErrorBaseConstructor` | A class extending `I18nErrorBase`. Non-subclasses are a type error. |
+| `message` | `string \| (meta) => string` | The message to register. `meta` is inferred from the target class. |
+| `lang` | `string \| Iterable<string>` | The target language. A single code or an iterable (e.g. an array). |
 
-Strings are converted to functions internally before being stored. Re-registering the same class and language overwrites the previous entry. Data is stored in the `WeakMap` at `globalThis.i18n_error_base__message_map`, keyed by class with values mapping languages to functions.
+Re-registering the same class and language overwrites.
 
 ## Types [#types]
 
@@ -95,7 +93,7 @@ type ErrorMeta = {
 };
 ```
 
-The default constraint for `TMeta`. Represents a readonly object with arbitrary properties.
+The default constraint for `TMeta`. A readonly object with arbitrary properties.
 
 ### `ErrorOptions` [#error-options]
 
@@ -109,7 +107,7 @@ type ErrorOptions =
     : { readonly cause?: unknown };
 ```
 
-A type derived from the second argument of the runtime's `Error` constructor. You can pass options including `cause`. The latter branch is a fallback for older environments.
+A type derived from `Error`'s second argument. You can pass `cause`.
 
 ### `MessageFactory<TMeta>` [#message-factory]
 
@@ -119,11 +117,11 @@ interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 }
 ```
 
-A function that generates a message from `meta`. Used both for the constructor's default message and for values registered with `setErrorMessage`.
+A function that creates a message from `meta`. Used for both default and registered messages.
 
 ### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
 
-A type representing the constructor argument overloads.
+Constructor argument overloads.
 
 ```ts
 type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
@@ -134,7 +132,7 @@ type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
     : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
 ```
 
-The `meta`-less form is allowed only when `TMeta` is `undefined`.
+Omit `meta` only when `TMeta` is `undefined`.
 
 ### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
 
@@ -144,10 +142,9 @@ interface I18nErrorBaseConstructor {
 }
 ```
 
-The type of the first argument of `setErrorMessage`. An internal identifying symbol prevents classes that do not extend `I18nErrorBase` from slipping in at the type level.
+The type of `setErrorMessage`'s first argument.
 
 ## Notes [#notes]
 
-- The default `lang` used to resolve `message` is `"en"`. Switch it explicitly with `setGlobalConfig({ lang })`
-- There is no normalization of language codes and no fallback chain (e.g. falling back from `en-US` to `en`). Unregistered languages always yield the default message
-- Registration data is kept in a process-wide `WeakMap`. To isolate tests, discard it with `globalThis.i18n_error_base__message_map = undefined`
+- The default `lang` is `"en"`. Switch with `setGlobalConfig({ lang })`.
+- No language code normalization or fallback chain (e.g. `en-US` → `en`). Unregistered languages use the default message.

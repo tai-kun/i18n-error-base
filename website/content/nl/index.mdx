@@ -3,7 +3,7 @@ title: i18n-error-base
 description: Een basisklasse voor Error die foutmeldingen schakelt in sync met de taalinstelling van Valibot.
 ---
 
-Een basisklasse voor het overerven van `Error` die `message` dynamisch schakelt in sync met de globale taalinstelling (`lang`) van Valibot.
+Een `Error`-basisklasse die `message` schakelt met Valibot's `lang`.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -23,45 +23,44 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Resource not found: user
 ```
 
-Omdat bij elke toegang tot `message` de actuele `lang` wordt geraadpleegd, kun je van taal wisselen zonder instanties opnieuw aan te maken. Voor talen zonder registratie valt de melding terug op het standaardbericht dat aan de constructor is doorgegeven.
+`message` verwijst bij elke toegang naar `lang`. Wissel zonder instanties opnieuw aan te maken. Talen zonder registratie gebruiken het standaardbericht uit de constructor.
 
 ## Kenmerken [#features]
 
-- Lost `message` dynamisch op in sync met Valibot's `getGlobalConfig()` / `setGlobalConfig({ lang })`
-- Registreer berichten per taal achteraf met `setErrorMessage`. Je kunt ook functies registreren die `meta` ontvangen
-- Valt terug op het standaardbericht uit de constructor voor talen zonder registratie
-- Voegt met `static prefix` per klasse een voorvoegsel toe aan het begin van het bericht
-- Bewaart `meta` in de constructor en geeft deze door aan berichtgenererende functies
-- Omdat de klasse `Error` overerft, blijven `instanceof Error`, `cause` en `stack` gewoon werken
-- Berichten worden in een `WeakMap` opgeslagen, zodat klassen die niet meer nodig zijn door de garbage collector worden opgeruimd
+- Lost `message` dynamisch op met Valibot's `setGlobalConfig({ lang })`
+- Registreer berichten per taal achteraf met `setErrorMessage`. Functies die `meta` ontvangen zijn ook toegestaan
+- Talen zonder registratie gebruiken het standaardbericht uit de constructor
+- Voegt een prefix toe via `static prefix` per klasse
+- Bewaart `meta` en geeft deze door aan berichtgenererende functies
+- `instanceof Error`, `cause` en `stack` werken zoals gewoonlijk
 
 ## Structuur [#structure]
 
 <CardGroup cols={2}>
   <Card title="Installatie" href="/nl/installation" icon="download">
-    Over het toevoegen van het pakket en de peer-afhankelijkheid van Valibot.
+    Het toevoegen van het pakket en de peer-afhankelijkheid.
   </Card>
   <Card title="Gebruik" href="/nl/usage" icon="book-open">
-    Basisbewerkingen van het definiëren van klassen tot het wisselen van taal, prefix en fallback.
+    Van definitie tot wisselen van taal, prefix en fallback.
   </Card>
   <Card title="API-referentie" href="/nl/api" icon="code">
-    De specificatie van `I18nErrorBase` en `setErrorMessage` en de bijbehorende typen.
+    De specificatie van `I18nErrorBase` en `setErrorMessage`.
   </Card>
 </CardGroup>
 
 ## Hoe het werkt [#how-it-works]
 
-De constructor van `I18nErrorBase` definieert `message` als een getter. Bij elke toegang wordt het bericht in de volgende volgorde opgelost.
+`message` wordt bij elke toegang in de volgende volgorde opgelost.
 
-1. Haalt `lang` op uit `getGlobalConfig()`. Indien niet ingesteld is dit `"en"`
-2. Als er een `(klasse × lang)`-functie is geregistreerd met `setErrorMessage`, wordt deze met `meta` uitgevoerd
-3. Zo niet, dan wordt het standaardbericht uit de constructor teruggegeven (een tekenreeks of het resultaat van een functie)
-4. Als `static prefix` is ingesteld, wordt deze vooraan samengevoegd
+1. Haalt `lang` op uit `getGlobalConfig()`. `"en"` indien niet ingesteld
+2. Als er een `(klasse × lang)`-registratie bestaat, wordt deze met `meta` uitgevoerd
+3. Zo niet, dan wordt het standaardbericht uit de constructor teruggegeven
+4. Als `static prefix` is ingesteld, wordt deze vooraan geplaatst
 
 :::tip
-De functievorm van het standaardbericht wordt bij de eerste toegang geëvalueerd en daarna gecachet. Berichten voor geregistreerde talen worden bij elke toegang opnieuw uit `meta` gegenereerd, zodat een taalwissel onmiddellijk wordt weerspiegeld.
+Geregistreerde berichten worden bij elke toegang uit `meta` gegenereerd, zodat een taalwissel onmiddellijk wordt weerspiegeld.
 :::
 
 ## Volgende stappen [#next-steps]
 
-Begin met [Installatie](/nl/installation) en bekijk de volledige flow in [Gebruik](/nl/usage). Details over typen en argumenten vind je in de [API-referentie](/nl/api).
+Begin met [Installatie](/nl/installation) en bekijk de flow in [Gebruik](/nl/usage). Details staan in de [API-referentie](/nl/api).

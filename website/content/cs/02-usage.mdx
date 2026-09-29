@@ -7,13 +7,13 @@ description: Definice chybových tříd, registrace zpráv, přepínání jazyk�
 
 <Steps>
   <Step title="Definujte chybovou třídu">
-    Zděděte z `I18nErrorBase<TMeta>` a definujte jako `TMeta` informace, které chcete použít při generování zprávy.
+    Zděděte z `I18nErrorBase<TMeta>` a definujte v `TMeta` údaje pro generování zprávy.
   </Step>
   <Step title="Registrujte zprávy pro jednotlivé jazyky">
-    Pomocí `setErrorMessage` registrujte zprávu odpovídající třídě a jazyku.
+    Pomocí `setErrorMessage` registrujte zprávu pro třídu a jazyk.
   </Step>
   <Step title="Přepněte jazyk a přečtěte message">
-    Přepněte pomocí `setGlobalConfig({ lang })` Valibotu a přistupte k `error.message`.
+    Přepněte pomocí `setGlobalConfig({ lang })` a přečtěte `error.message`.
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## Definice chybové třídy [#define-error-class]
 
-`TMeta` je typ doprovodných informací používaných ke generování zprávy. Uchovává se jako `error.meta` a předává se i funkcím v `setErrorMessage`.
+`TMeta` jsou pomocné údaje pro generování zprávy. Uchovávají se v `error.meta` a předávají se registrovaným funkcím.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-Druhý argument konstruktoru je řetězec nebo funkce `(meta) => string`. Jako třetí argument lze předat volby jako `{ cause }`, stejně jako u `Error`.
+Druhý argument je řetězec nebo funkce `(meta) => string`. Třetí jsou volby `Error`, např. `{ cause }`.
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-`I18nErrorBase` není určeno k přímé konstrukci pomocí `new`. Vždy vytvořte konkrétní zděděnou třídu a tu používejte. Registrace zpráv se rozlišuje podle konstruktoru (`this.constructor`), takže zprávy registrované pro rodičovskou třídu se na potomky nepřenášejí.
+Nepoužívejte `new` přímo; vždy děďte. Registrace jsou vázány na třídu, takže registrace rodiče na potomky nepřechází.
 :::
 
 ## Registrace zprávy [#register-message]
 
-`setErrorMessage` registruje funkci pro tvorbu zprávy pro danou třídu a jazyk.
+`setErrorMessage` registruje funkce pro tvorbu zprávy pro třídu a jazyk.
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-Pokud předáte řetězec, interně se převede na `() => text`. Jazyk lze zadat i jako pole řetězců.
+Řetězce jsou povoleny také. Jazyky lze zadat jako pole.
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-Opětovná registrace stejné třídy a jazyka původní hodnotu přepíše. Registrace se použije pouze tehdy, když je konstruktor při registraci a při přístupu identický, nezávisle na vyhodnocení `instanceof`.
+Opětovná registrace stejné třídy a jazyka hodnotu přepíše. Platí jen pro shodné konstruktory při registraci a při přístupu, ne přes `instanceof`.
 
 :::warning[Pozor na přístup před registrací]
-Funkční forma výchozí zprávy se vyhodnotí při prvním přístupu a uloží do mezipaměti. Pokud přečtete `message` v neregistrovaném jazyce před voláním `setErrorMessage`, tato výchozí hodnota se zafixuje. Zprávy pro jednotlivé jazyky proto zpravidla registrujte před vytvořením instancí.
+Přečtení `message` nejdříve zafixuje výchozí hodnotu. Registrujte před vytvořením instancí.
 :::
 
 ## Přepínání jazyka [#switch-language]
 
-Jazyk se přepíná globálním nastavením Valibotu. `message` při každém přístupu zohledňuje aktuální `lang`.
+Přepněte v globálním nastavení Valibotu. `message` při každém čtení zohledňuje aktuální `lang`.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-Není-li `lang` nastaveno, výchozí hodnota je `"en"`. Pokud požádáte o jazyk bez registrace, použije se výchozí zpráva předaná konstruktoru.
+Nenastavené `lang` je `"en"`. Neregistrované jazyky používají výchozí zprávu z konstruktoru.
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## Předpona [#prefix]
 
-Nastavíte-li třídě `static prefix`, připojí se na začátek vyhodnocené zprávy. Použije se jak na přeložené zprávy, tak na výchozí zprávy.
+`static prefix` se připojí na začátek vyhodnocené zprávy. Platí pro přeložené i výchozí zprávy.
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-Není-li nastaven, vrací se zpráva beze změny bez předpony.
+Není-li nastaven, vrací se beze změny.
 
 ## Chování jako Error [#error-behavior]
 
 - `error instanceof Error`, `instanceof I18nErrorBase` i `instanceof` konkrétní třídy jsou ve všech případech `true`
-- `message` je enumerovatelné (je obsaženo v `Object.keys(error)`)
 - `String(error)` / `error.toString()` obsahují vyhodnocenou zprávu (např. `"Error: ..."`)
-- `cause` se uchovává pomocí `new TestError(meta, message, { cause })`. Jako polyfill pro starší běhová prostředí je zahrnuto přiřazení `options.cause`, když `cause` není podporováno
+- `cause` se uchovává přes `{ cause }`
 
 ## Běžné vzory [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-Volající strana pak pracuje pouze s `meta` a vyhne se duplikaci výchozího textu (zde anglického).
+Volající strana pak pracuje pouze s `meta` a vyhne se duplikaci výchozího textu.
 
 ### Hromadná registrace více jazyků [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-Kódy jazyků se nenormalizují. `"en"` a `"en-US"` se považují za odlišné klíče, proto potřebné kódy registrujte explicitně.
+Kódy jazyků se nenormalizují. `"en"` a `"en-US"` jsou odlišné klíče, proto potřebné kódy registrujte explicitně.

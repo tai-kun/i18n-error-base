@@ -3,7 +3,7 @@ title: i18n-error-base
 description: Osnovna klasa za Error koja prebacuje poruke o pogreškama u skladu s jezičnom postavkom Valibota.
 ---
 
-Osnovna klasa za nasljeđivanje klase `Error` koja dinamički prebacuje `message` u skladu s Valibot globalnom jezičnom postavkom (`lang`).
+`Error` osnovna klasa koja prebacuje `message` s Valibot `lang`.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -23,45 +23,44 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Resource not found: user
 ```
 
-Budući da se `lang` u trenutku pristupa svojstvu `message` referencira, jezik se može prebaciti bez ponovnog stvaranja instance. Za jezike bez registracije koristi se zamjenska zadana poruka predana konstruktoru.
+`message` se pri svakom čitanju odnosi na `lang`. Prebacite bez ponovnog stvaranja instanci. Neregistrirani jezici koriste zadanu poruku iz konstruktora.
 
 ## Značajke [#features]
 
-- Povezuje se s Valibot metodama `getGlobalConfig()` / `setGlobalConfig({ lang })` i dinamički razrješava `message`
-- Poruke za svaki jezik naknadno se registriraju pomoću `setErrorMessage`. Mogu se registrirati i funkcije koje primaju `meta`
-- Za jezike bez registracije koristi se zadana poruka iz konstruktora
-- Pomoću `static prefix` po klasi može se dodati prefiks na početak poruke
-- `meta` se čuva u konstruktoru i prosljeđuje funkciji za generiranje poruke
-- Budući da nasljeđuje `Error`, `instanceof Error`, `cause` i `stack` mogu se koristiti izravno
-- Poruke se pohranjuju u `WeakMap`, pa se nepotrebne klase prikupljaju sakupljačem smeća
+- Dinamički razrješava `message` s Valibot `setGlobalConfig({ lang })`
+- Naknadno registrira poruke po jeziku s `setErrorMessage`. Dopuštene su i funkcije koje primaju `meta`
+- Neregistrirani jezici koriste zadanu poruku iz konstruktora
+- Dodaje prefiks putem `static prefix` po klasi
+- Čuva `meta` i prosljeđuje ga tvorničkim funkcijama poruka
+- `instanceof Error`, `cause` i `stack` rade kao obično
 
 ## Struktura [#structure]
 
 <CardGroup cols={2}>
   <Card title="Instalacija" href="/hr/installation" icon="download">
-    O dodavanju paketa i peer ovisnosti o Valibotu.
+    Kako dodati paket i peer ovisnost.
   </Card>
   <Card title="Korištenje" href="/hr/usage" icon="book-open">
-    Osnovne operacije od definiranja klase do prebacivanja jezika, prefiksa i zamjenske poruke.
+    Od definicije do prebacivanja, prefiksa i zamjene.
   </Card>
   <Card title="API referenca" href="/hr/api" icon="code">
-    Specifikacija za `I18nErrorBase` i `setErrorMessage` te povezane tipove.
+    Specifikacije za `I18nErrorBase` i `setErrorMessage`.
   </Card>
 </CardGroup>
 
 ## Kako funkcionira [#how-it-works]
 
-Konstruktor klase `I18nErrorBase` definira `message` kao getter. Pri svakom pristupu razrješava se sljedećim redoslijedom.
+`message` se pri svakom čitanju razrješava sljedećim redom.
 
-1. Dohvaća `lang` iz `getGlobalConfig()`. Ako nije postavljeno, vrijednost je `"en"`
-2. Ako postoji funkcija `(klasa × lang)` registrirana pomoću `setErrorMessage`, izvršava je s proslijeđenim `meta`
-3. U suprotnom vraća string predan konstruktoru ili rezultat funkcije (zadana poruka)
+1. Dohvaća `lang` iz `getGlobalConfig()`. `"en"` kad nije postavljeno
+2. Ako postoji registracija `(klasa × lang)`, izvršava je s `meta`
+3. Inače vraća zadanu poruku iz konstruktora
 4. Ako je postavljen `static prefix`, dodaje ga na početak
 
 :::tip
-Funkcijski oblik zadane poruke procjenjuje se pri prvom pristupu i potom se sprema u predmemoriju. Poruke registriranih jezika regeneriraju se iz `meta` pri svakom pristupu, pa se prebacivanje jezika odražava odmah.
+Registrirane poruke generiraju se iz `meta` pri svakom čitanju, pa prebacivanje vrijedi odmah.
 :::
 
 ## Sljedeći koraci [#next-steps]
 
-Započnite s [instalacijom](/hr/installation) i provjerite cijeli tijek u [korištenju](/hr/usage). Detalje o tipovima i argumentima saželi smo u [API referenci](/hr/api).
+Počnite s [instalacijom](/hr/installation), pa tijek pogledajte u [korištenju](/hr/usage). Detalji su u [API referenci](/hr/api).

@@ -7,13 +7,13 @@ description: Grundlæggende arbejdsgang for at definere fejlklasser, registrere 
 
 <Steps>
   <Step title="Definér en fejlklasse">
-    Nedarv `I18nErrorBase<TMeta>`, og definér de oplysninger, du vil bruge til meddelelsesgenerering, som `TMeta`.
+    Nedarv `I18nErrorBase<TMeta>`, og definér info til meddelelsesgenerering i `TMeta`.
   </Step>
   <Step title="Registrer sprogspecifikke meddelelser">
     Registrer meddelelsen for hver klasse og hvert sprog med `setErrorMessage`.
   </Step>
   <Step title="Skift sprog og læs message">
-    Skift med Valibots `setGlobalConfig({ lang })`, og tilgå `error.message`.
+    Skift med `setGlobalConfig({ lang })`, og læs `error.message`.
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## Definér en fejlklasse [#define-error-class]
 
-`TMeta` er typen for de supplerende oplysninger, der bruges til meddelelsesgenerering. Den beholdes som `error.meta` og sendes også til funktionen i `setErrorMessage`.
+`TMeta` er hjælpeinfo til meddelelsesgenerering. Den beholdes som `error.meta` og sendes til registrerede funktioner.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-Konstruktørens andet argument er en streng eller en `(meta) => string`-funktion. Som tredje argument kan du sende de samme indstillinger som til `Error`, f.eks. `{ cause }`.
+Konstruktørens andet argument er en streng eller en `(meta) => string`-funktion. Det tredje er `{ cause }` og andre `Error`-indstillinger.
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-`I18nErrorBase` er ikke beregnet til at blive konstrueret direkte med `new`. Opret og brug altid en konkret underklasse. Meddelelsesregistreringer skelnes pr. konstruktør (`this.constructor`), så en meddelelse registreret på en forældreklasse nedarves aldrig af en underklasse.
+Brug ikke `new` direkte; nedarv altid. Registreringer er pr. klasse, så registreringer på en forældreklasse nedarves ikke af børn.
 :::
 
 ## Registrer meddelelser [#register-message]
 
-`setErrorMessage` registrerer en meddelelsesfunktion for en klasse og et sprog.
+`setErrorMessage` registrerer fabriksfunktioner pr. klasse og sprog.
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-En streng konverteres internt til `() => text`. Sprog kan også angives som en strengmatrix.
+Strenge er også tilladt. Sprog kan angives som arrays.
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-Genregistrering af samme klasse og sprog overskriver den tidligere post. Registreringen bruges kun, når konstruktøren ved registrering og ved opslag er identisk, uanset `instanceof`-kontroller.
+Genregistrering af samme klasse og sprog overskriver. Den gælder kun, når konstruktørerne ved registrering og opslag er ens, ikke via `instanceof`.
 
 :::warning[Pas på adgang før registrering]
-Funktionsformen af standardmeddelelsen evalueres og caches ved første adgang. Hvis du læser `message` på et uregistreret sprog, før du kalder `setErrorMessage`, fastlåses denne standardværdi. Registrer som hovedregel sprogspecifikke meddelelser, før du opretter instanser.
+Læsning af `message` først fastlåser standardværdien. Registrer før du opretter instanser.
 :::
 
 ## Skift sprog [#switch-language]
 
-Sprog skiftes med Valibots globale indstilling. `message` slår den aktuelle `lang` op ved hver adgang.
+Skift med Valibots globale indstilling. `message` slår den aktuelle `lang` op ved hver adgang.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-Standarden, når `lang` ikke er angivet, er `"en"`. Hvis det ønskede sprog ikke er registreret, falder den tilbage til standardmeddelelsen fra konstruktøren.
+Uden angivet `lang` er den `"en"`. Uregistrerede sprog bruger konstruktørens standardmeddelelse.
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## Tilføj et præfiks [#prefix]
 
-Hvis du sætter `static prefix` på en klasse, sættes det foran den løste meddelelse. Det gælder både oversatte meddelelser og standardmeddelelser.
+`static prefix` sættes foran den løste meddelelse. Det gælder både oversatte meddelelser og standardmeddelelser.
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-Når det ikke er angivet, returneres meddelelsen uændret uden præfiks.
+Når det ikke er angivet, returneres meddelelsen som den er.
 
 ## Opførsel som Error [#error-behavior]
 
 - `error instanceof Error`, `instanceof I18nErrorBase` og `instanceof <konkret klasse>` er alle `true`
-- `message` kan optælles (den er inkluderet i `Object.keys(error)`)
 - `String(error)` / `error.toString()` indeholder den løste meddelelse (f.eks. `"Error: ..."`)
-- `cause` beholdes via `new TestError(meta, message, { cause })`. Som polyfill til ældre kørselsmiljøer er der indbygget håndtering, der tildeler `options.cause`, når `cause` ikke understøttes
+- `cause` beholdes via `{ cause }`
 
 ## Almindelige mønstre [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-Kalderen skal kun tænke på `meta`, så dublering af standardteksten (her engelsk) undgås.
+Kalderen skal kun sende `meta`, så dublering af standardteksten undgås.
 
 ### Registrer flere sprog på én gang [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-Sprogkoder normaliseres ikke. `"en"` og `"en-US"` behandles som separate nøgler, så registrer eksplicit alle de koder, du har brug for.
+Sprogkoder normaliseres ikke. `"en"` og `"en-US"` er separate nøgler, så registrer de nødvendige koder eksplicit.

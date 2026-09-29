@@ -7,13 +7,13 @@ description: Hata sınıfı tanımlama, mesaj kaydetme, dil değiştirme, önek 
 
 <Steps>
   <Step title="Hata sınıfını tanımlayın">
-    `I18nErrorBase<TMeta>` sınıfından türetin ve mesaj üretiminde kullanmak istediğiniz bilgileri `TMeta` olarak tanımlayın.
+    `I18nErrorBase<TMeta>` sınıfından türetin ve mesaj bilgisini `TMeta` olarak tanımlayın.
   </Step>
   <Step title="Dile özgü mesajları kaydedin">
-    `setErrorMessage` ile sınıfa ve dile karşılık gelen mesajları kaydedin.
+    `setErrorMessage` ile her sınıf ve dilin mesajını kaydedin.
   </Step>
   <Step title="Dili değiştirip message değerini okuyun">
-    Valibot'un `setGlobalConfig({ lang })` işleviyle değiştirin ve `error.message` değerine erişin.
+    `setGlobalConfig({ lang })` ile değiştirin ve `error.message` okuyun.
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## Hata sınıfını tanımlama [#define-error-class]
 
-`TMeta`, mesaj üretiminde kullanılan ek bilginin türüdür. `error.meta` olarak saklanır ve `setErrorMessage` işlevine de aktarılır.
+`TMeta`, mesaj üretimi için ek bilgidir. `error.meta` olarak saklanır ve kayıtlı işlevlere aktarılır.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-Oluşturucunun 2. bağımsız değişkeni bir dizge veya `(meta) => string` işlevidir. 3. bağımsız değişken olarak `Error` ile aynı `{ cause }` gibi seçenekler geçirilebilir.
+2. bağımsız değişken dize veya `(meta) => string` işlevidir. 3. ise `{ cause }` ve diğer `Error` seçenekleridir.
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-`I18nErrorBase` sınıfının doğrudan `new` ile kullanılması amaçlanmamıştır. Mutlaka türetilmiş somut bir sınıf oluşturup kullanın. Mesajların kayıt yeri oluşturucu birimi (`this.constructor`) bazında ayırt edildiği için, üst sınıfa kaydedilen mesajlar alt sınıflara aktarılmaz.
+Doğrudan `new` kullanmayın; her zaman türetin. Kayıt sınıf bazındadır, üst kaydı alta aktarılmaz.
 :::
 
 ## Mesajı kaydetme [#register-message]
 
-`setErrorMessage`, sınıfa ve dile yönelik mesaj üretim işlevini kaydeder.
+`setErrorMessage`, sınıf ve dil bazında üretim işlevlerini kaydeder.
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-Dizge geçirilirse dahili olarak `() => text` biçimine dönüştürülür. Dil, dizge dizisi olarak da belirtilebilir.
+Dize de verilebilir. Diller dizi olarak belirtilebilir.
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-Aynı sınıf ve dile yeniden kayıt yapılırsa üzerine yazılır. Kayıt içeriği, `instanceof` değerlendirmesinden bağımsız olarak yalnızca kayıt sırasındaki ve başvuru sırasındaki oluşturucu aynı olduğunda kullanılır.
+Aynı sınıf ve dile yeniden kayıt üzerine yazar. Yalnızca kayıt ve başvuru oluşturucuları aynıysa kullanılır, `instanceof` ile değil.
 
 :::warning[Kayıttan önce erişime dikkat]
-Varsayılan mesajın işlev biçimi ilk erişimde değerlendirilip önbelleğe alınır. `setErrorMessage` çağrısından önce kayıtsız bir dilde `message` okunursa, bu varsayılan değer sabitlenir. Dile özgü mesajları ilke olarak örnek oluşturmadan önce kaydedin.
+`message` erken okunursa varsayılan değer sabitlenir. Örnek oluşturmadan önce kaydedin.
 :::
 
 ## Dili değiştirme [#switch-language]
 
-Dil, Valibot'un genel ayarıyla değiştirilir. `message` her erişimde güncel `lang` değerine başvurur.
+Valibot genel ayarıyla değiştirin. `message` her okumada güncel `lang` değerine başvurur.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-`lang` ayarlanmadığında varsayılan `"en"` olur. Kayıtlı mesajı olmayan bir dil istenirse, oluşturucuya verilen varsayılan mesaja geri dönülür.
+Ayarlanmamış `lang` `"en"` olur. Kayıtsız diller oluşturucunun varsayılan mesajını kullanır.
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## Önek ekleme [#prefix]
 
-Sınıfa `static prefix` ayarlanırsa, çözümlenmiş mesajın başına eklenir. Çevrilmiş mesaja da varsayılan mesaja da uygulanır.
+`static prefix`, çözümlenmiş mesajın başına eklenir. Çevrilmiş ve varsayılan mesajlara uygulanır.
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-Ayarlanmazsa öneksiz olarak aynen döndürülür.
+Ayarlanmazsa aynen döndürülür.
 
 ## Error olarak davranış [#error-behavior]
 
-- `error instanceof Error`, `instanceof I18nErrorBase`, `instanceof somut sınıf` değerlerinin tümü `true` olur
-- `message` numaralandırılabilir (`Object.keys(error)` içinde yer alır)
+- `error instanceof Error`, `instanceof I18nErrorBase`, `instanceof` somut sınıf tümü `true` olur
 - `String(error)` / `error.toString()` çözümlenmiş mesajı içerir (ör: `"Error: ..."`)
-- `cause`, `new TestError(meta, message, { cause })` ile saklanır. Eski çalıştırma ortamlarına yönelik çoklu doldurma olarak, `cause` desteklenmediğinde `options.cause` değerini atayan işlem dahildir
+- `cause`, `{ cause }` ile saklanır
 
 ## Yaygın kalıplar [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-Çağıran taraf yalnızca `meta` değerine odaklanırsa yeterli olur ve varsayılan metnin (burada İngilizce) yinelenmesi önlenebilir.
+Çağıran taraf yalnızca `meta` geçirir, varsayılan metin tekrarını önler.
 
 ### Birden çok dili topluca kaydetme [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-Dil kodları normalize edilmez. `"en"` ve `"en-US"` ayrı anahtarlar olarak işlenir, bu nedenle gerekli kodları açıkça kaydedin.
+Dil kodları normalize edilmez. `"en"` ve `"en-US"` ayrı anahtarlardır, gerekli kodları açıkça kaydedin.

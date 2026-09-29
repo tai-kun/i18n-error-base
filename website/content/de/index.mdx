@@ -3,7 +3,7 @@ title: i18n-error-base
 description: Basisklasse für Error, die Fehlermeldungen synchron mit der Spracheinstellung von Valibot umschaltet.
 ---
 
-Eine Basisklasse zur Erweiterung von `Error`, die `message` synchron mit der globalen Spracheinstellung (`lang`) von Valibot dynamisch umschaltet.
+Eine `Error`-Basisklasse, die `message` mit Valibots `lang` umschaltet.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -23,45 +23,44 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Resource not found: user
 ```
 
-Da `lang` bei jedem Zugriff auf `message` zum aktuellen Zeitpunkt gelesen wird, kann die Sprache ohne Neuerstellung der Instanz gewechselt werden. Für Sprachen ohne Registrierung wird auf die im Konstruktor übergebene Standardnachricht zurückgegriffen.
+`message` bezieht sich bei jedem Lesen auf `lang`. Wechsel ohne Neuerstellung der Instanz. Nicht registrierte Sprachen verwenden die Standardnachricht des Konstruktors.
 
 ## Funktionen [#features]
 
-- Löst `message` dynamisch synchron mit `getGlobalConfig()` / `setGlobalConfig({ lang })` von Valibot auf
-- Sprachspezifische Nachrichten werden nachträglich mit `setErrorMessage` registriert. Es können auch Funktionen registriert werden, die `meta` erhalten
-- Für Sprachen ohne Registrierung wird auf die Standardnachricht des Konstruktors zurückgegriffen
-- Mit `static prefix` pro Klasse kann ein Präfix am Anfang der Nachricht hinzugefügt werden
-- Behält `meta` im Konstruktor und übergibt es an Nachrichten-Erzeugungsfunktionen
-- Da die Klasse von `Error` erbt, funktionieren `instanceof Error`, `cause` und `stack` wie gewohnt
-- Nachrichten werden in einer `WeakMap` gespeichert, sodass nicht mehr benötigte Klassen per Garbage Collection freigegeben werden
+- Löst `message` dynamisch mit Valibots `setGlobalConfig({ lang })` auf.
+- Sprachspezifische Nachrichten werden nachträglich mit `setErrorMessage` registriert. Funktionen mit `meta` sind ebenfalls zulässig.
+- Nicht registrierte Sprachen verwenden die Standardnachricht des Konstruktors.
+- Fügt ein Präfix über `static prefix` pro Klasse hinzu.
+- Behält `meta` und übergibt es an Nachrichten-Erzeugungsfunktionen.
+- `instanceof Error`, `cause` und `stack` funktionieren wie gewohnt.
 
 ## Struktur [#structure]
 
 <CardGroup cols={2}>
   <Card title="Installation" href="/de/installation" icon="download">
-    Hinzufügen des Pakets und zur Peer-Abhängigkeit von Valibot.
+    Hinzufügen des Pakets und der Peer-Abhängigkeit.
   </Card>
   <Card title="Verwendung" href="/de/usage" icon="book-open">
-    Grundlegende Abläufe von der Klassendefinition über Sprachwechsel und Präfix bis zum Fallback.
+    Von der Definition über Wechsel und Präfix bis zum Fallback.
   </Card>
   <Card title="API-Referenz" href="/de/api" icon="code">
-    Spezifikation von `I18nErrorBase` und `setErrorMessage` sowie der zugehörigen Typen.
+    Spezifikation von `I18nErrorBase` und `setErrorMessage`.
   </Card>
 </CardGroup>
 
 ## Funktionsweise [#how-it-works]
 
-Der Konstruktor von `I18nErrorBase` definiert `message` als Getter. Bei jedem Zugriff wird es in folgender Reihenfolge aufgelöst.
+`message` wird bei jedem Lesen in folgender Reihenfolge aufgelöst.
 
-1. Holt `lang` aus `getGlobalConfig()`. Wenn nicht gesetzt, ist es `"en"`
-2. Falls eine mit `setErrorMessage` registrierte Funktion für (Klasse × lang) existiert, wird sie mit `meta` ausgeführt
-3. Andernfalls wird die im Konstruktor übergebene Standardnachricht (Zeichenkette oder Funktionsergebnis) zurückgegeben
-4. Falls `static prefix` gesetzt ist, wird es am Anfang verkettet
+1. Holt `lang` aus `getGlobalConfig()`. Wenn nicht gesetzt, `"en"`.
+2. Falls eine `(Klasse × lang)`-Registrierung existiert, wird sie mit `meta` ausgeführt.
+3. Andernfalls wird die Standardnachricht des Konstruktors zurückgegeben.
+4. Falls `static prefix` gesetzt ist, wird es vorangestellt.
 
 :::tip
-Die Funktionsform der Standardnachricht wird beim ersten Zugriff ausgewertet und danach zwischengespeichert. Nachrichten registrierter Sprachen werden bei jedem Zugriff aus `meta` neu erzeugt, sodass Sprachwechsel sofort wirksam werden.
+Registrierte Nachrichten werden bei jedem Lesen aus `meta` erzeugt, sodass Sprachwechsel sofort wirksam werden.
 :::
 
 ## Nächste Schritte [#next-steps]
 
-Beginnen Sie mit der [Installation](/de/installation) und sehen Sie sich den gesamten Ablauf in der [Verwendung](/de/usage) an. Details zu Typen und Argumenten finden Sie in der [API-Referenz](/de/api).
+Beginnen Sie mit der [Installation](/de/installation) und sehen Sie den Ablauf in der [Verwendung](/de/usage). Details finden Sie in der [API-Referenz](/de/api).

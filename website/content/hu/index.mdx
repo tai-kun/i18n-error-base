@@ -3,7 +3,7 @@ title: i18n-error-base
 description: Hibaüzeneteket váltó Error alaposztály, amely a Valibot nyelvi beállításával működik együtt.
 ---
 
-Alaposztály az `Error` örökléséhez, amely a Valibot globális nyelvi beállításával (`lang`) együttműködve dinamikusan váltja a `message` értékét.
+`Error` alaposztály, amely a Valibot `lang` beállításával váltja a `message` értékét.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -23,45 +23,44 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Resource not found: user
 ```
 
-Mivel a `message` elérésekor az aktuális `lang` értéket olvassa, a példány újraalkotása nélkül válthat nyelvet. Nem regisztrált nyelv esetén a konstruktornak átadott alapértelmezett üzenetre esik vissza.
+A `message` minden olvasáskor a `lang` értékre hivatkozik. Váltson a példány újraalkotása nélkül. Nem regisztrált nyelv esetén a konstruktor alapértelmezett üzenete használatos.
 
 ## Jellemzők [#features]
 
-- A Valibot `getGlobalConfig()` / `setGlobalConfig({ lang })` beállításaival működik együtt, és dinamikusan oldja fel a `message` értékét
-- A nyelvenkénti üzeneteket utólag regisztrálhatja a `setErrorMessage` segítségével. A `meta` értéket fogadó függvények is regisztrálhatók
-- Nem regisztrált nyelv esetén a konstruktor alapértelmezett üzenetére esik vissza
+- A `message` értékét dinamikusan oldja fel a `setGlobalConfig({ lang })` segítségével
+- A nyelvenkénti üzeneteket utólag regisztrálja a `setErrorMessage` segítségével. A `meta` értéket fogadó függvények is megadhatók
+- Nem regisztrált nyelv esetén a konstruktor alapértelmezett üzenete használatos
 - Osztályszintű `static prefix` segítségével előtag fűzhető az üzenet elejére
-- A `meta` értéket a konstruktor tárolja, és átadja az üzenetgeneráló függvényeknek
-- Mivel az `Error` osztályból öröklődik, az `instanceof Error`, a `cause` és a `stack` változatlanul használható
-- Az üzenetek tárolója `WeakMap`, így a feleslegessé vált osztályokat a szemétgyűjtő felszabadítja
+- A `meta` értéket tárolja, és átadja az üzenetgeneráló függvényeknek
+- Az `instanceof Error`, a `cause` és a `stack` változatlanul használható
 
 ## Felépítés [#structure]
 
 <CardGroup cols={2}>
   <Card title="Telepítés" href="/hu/installation" icon="download">
-    A csomag hozzáadása és a Valibot peer függősége.
+    A csomag hozzáadása és a peer függőség.
   </Card>
   <Card title="Használat" href="/hu/usage" icon="book-open">
-    Alapműveletek az osztálydefiníciótól a nyelvváltáson, a prefixen és a tartalék üzeneten át.
+    A definíciótól a váltáson, a prefixen és a tartalék üzeneten át.
   </Card>
   <Card title="API-referencia" href="/hu/api" icon="code">
-    Az `I18nErrorBase` és a `setErrorMessage`, valamint a kapcsolódó típusok specifikációja.
+    Az `I18nErrorBase` és a `setErrorMessage` specifikációja.
   </Card>
 </CardGroup>
 
 ## Működés [#how-it-works]
 
-Az `I18nErrorBase` konstruktora a `message` tulajdonságot getterként definiálja. Minden eléréskor az alábbi sorrendben oldja fel.
+A `message` minden olvasáskor az alábbi sorrendben oldódik fel.
 
 1. Lekéri a `lang` értéket a `getGlobalConfig()` segítségével. Ha nincs beállítva, `"en"`
-2. Ha van a `setErrorMessage` segítségével regisztrált (osztály × `lang`) függvény, végrehajtja a `meta` átadásával
-3. Ha nincs, a konstruktornak átadott sztringet vagy függvény eredményét (alapértelmezett üzenet) adja vissza
+2. Ha van regisztrált (osztály × `lang`) függvény, végrehajtja a `meta` átadásával
+3. Ha nincs, a konstruktor alapértelmezett üzenetét adja vissza
 4. Ha a `static prefix` be van állítva, az üzenet elejére fűzi
 
 :::tip
-Az alapértelmezett üzenet függvényformája az első eléréskor kerül kiértékelésre, majd gyorsítótárazásra. A regisztrált nyelvek üzenetei minden eléréskor újra generálódnak a `meta` alapján, így a nyelvváltás azonnal érvényesül.
+A regisztrált üzenetek minden olvasáskor újra generálódnak a `meta` alapján, így a váltás azonnal érvényesül.
 :::
 
 ## Következő lépések [#next-steps]
 
-Kezdje a [telepítéssel](/hu/installation), majd tekintse át a teljes folyamatot a [használat](/hu/usage) oldalon. A típusok és argumentumok részleteit az [API-referenciában](/hu/api) találja.
+Kezdje a [telepítéssel](/hu/installation), majd tekintse át a folyamatot a [használat](/hu/usage) oldalon. A részleteket az [API-referenciában](/hu/api) találja.

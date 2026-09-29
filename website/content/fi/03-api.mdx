@@ -5,7 +5,7 @@ description: I18nErrorBase-, setErrorMessage- ja niihin liittyvien tyyppien mä�
 
 ## `I18nErrorBase` [#i18n-error-base]
 
-`Error`-luokan periyttämiseen tarkoitettu perusluokka. Se määrittää `message`-ominaisuuden uudelleen getterinä ja ratkaisee sen dynaamisesti Valibotin `lang`-arvon mukaisesti.
+`Error`-luokan periyttämiseen tarkoitettu perusluokka. `message` ratkaistaan `lang`-arvon mukaisesti.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -17,20 +17,20 @@ class MyError extends I18nErrorBase<{ code: string }> {}
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Liitännäistietojen tyyppi, joka säilytetään `meta`-ominaisuutena. Jos sitä ei käytetä, anna `undefined`. |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | `meta`-ominaisuuden tyyppi. Jos sitä ei käytetä, anna `undefined`. |
 
 ### Staattiset ominaisuudet [#static-props]
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `prefix?` | `string` | `undefined` | Kun asetettu, liitetään ratkaistun viestin alkuun. |
+| `prefix?` | `string` | `undefined` | Liitetään ratkaistun viestin alkuun. |
 
 ### Instanssiominaisuudet [#instance-props]
 
 | Prop | Type | Description |
 | ---- | ---- | ----------- |
-| `meta` | `TMeta` | Rakentajalle annetut liitännäistiedot. Luettavissa ja kirjoitettavissa. |
-| `message` | `string` | Senhetkisen `lang`-arvon mukaisesti ratkaistava viesti. Lueteltavissa. |
+| `meta` | `TMeta` | Rakentajan liitännäistiedot. Luettavissa ja kirjoitettavissa. |
+| `message` | `string` | Ratkaistaan `lang`-arvon mukaisesti. Lueteltavissa. |
 | `cause` | `unknown` | `ErrorOptions`-valinnalla annettu syy. `Error`-luokan vakiominaisuus. |
 
 ### Rakentaja [#constructor]
@@ -50,26 +50,24 @@ new MyError(meta, message, options?)
 
 | Parametri | Tyyppi | Kuvaus |
 | --------- | ------ | ------ |
-| `meta` | `TMeta` | Viestin luomisessa käytettävät liitännäistiedot. |
-| `message` | `string \| MessageFactory<TMeta>` | Oletusviesti kielille, joille viestiä ei ole rekisteröity. Funktio vastaanottaa `meta`-arvon. |
+| `meta` | `TMeta` | Viestin luomisen liitännäistiedot. |
+| `message` | `string \| MessageFactory<TMeta>` | Oletusviesti rekisteröimättömille kielille. Funktio vastaanottaa `meta`-arvon. |
 | `options` | `ErrorOptions` | `Error`-luokan toisen argumentin kanssa yhteensopivat valinnat (esim. `{ cause }`). |
-
-Jos `message`-argumentiksi annetaan muu kuin merkkijono (esim. luku), se muunnetaan merkkijonoksi `String(...)`-funktiolla. Jos viestitehdas palauttaa tyhjän merkkijonon, myös `message` on tyhjä merkkijono.
 
 ### Selvitysjärjestys [#resolution-order]
 
-1. Hakee `lang`-arvon `getGlobalConfig()`-funktiolla (oletus `"en"`, jos asetusta ei ole)
-2. Suorittaa `setErrorMessage`-funktiolla rekisteröidyn kyseisen luokan ja kielen funktion `meta`-arvolla
-3. Jos rekisteröintiä ei ole, käyttää rakentajan oletusviestiä (merkkijono tai funktion arviointitulos; ensimmäisen arvioinnin jälkeen välimuistissa)
+1. Hakee `lang`-arvon `getGlobalConfig()`-funktiolla (`"en"`, jos asetusta ei ole)
+2. Suorittaa kyseisen luokan ja kielen rekisteröidyn funktion `meta`-arvolla
+3. Jos rekisteröintiä ei ole, käyttää oletusviestiä
 4. Jos `static prefix` on asetettu, liittää sen alkuun
 
 :::note
-Rekisteröinnit täsmäytetään `this.constructor`-arvon täsmällisellä vastaavuudella. Yliluokkaan tehty rekisteröinti ei periydy aliluokkiin. Rekisteröi jokainen tarvittava luokka erikseen.
+Rekisteröinnit ovat luokkakohtaisia. Yliluokan rekisteröinnit eivät periydy. Rekisteröi jokainen luokka.
 :::
 
 ## `setErrorMessage` [#set-error-message]
 
-Rekisteröi kielikohtaisen viestin luontifunktion.
+Rekisteröi kielikohtaiset viestin luontifunktiot.
 
 ```ts
 import { setErrorMessage } from "i18n-error-base";
@@ -80,10 +78,10 @@ setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
 | Parametri | Tyyppi | Kuvaus |
 | --------- | ------ | ------ |
 | `reference` | `I18nErrorBaseConstructor` | `I18nErrorBase`-luokasta peritty luokka. Perimättömät luokat aiheuttavat tyyppivirheen. |
-| `message` | `string \| (meta) => string` | Rekisteröitävä viesti. `meta`-tyyppi päätellään kohdeluokan `meta`-tyypistä. |
-| `lang` | `string \| Iterable<string>` | Kohdekieli. Yksittäinen koodi tai koodien iteroitava kokoelma (esim. taulukko). |
+| `message` | `string \| (meta) => string` | Rekisteröitävä viesti. `meta`-tyyppi päätellään kohdeluokasta. |
+| `lang` | `string \| Iterable<string>` | Kohdekieli. Yksittäinen koodi tai iteroitava kokoelma (esim. taulukko). |
 
-Merkkijonot muunnetaan sisäisesti funktioiksi ja säilytetään. Saman luokan ja kielen uudelleenrekisteröinti korvaa aiemman. Tallennuspaikka on `globalThis.i18n_error_base__message_map`-objektin `WeakMap`, jonka avain on luokka ja arvo kielestä funktioon yhdistävä `Map`.
+Saman luokan ja kielen uudelleenrekisteröinti korvaa.
 
 ## Tyypit [#types]
 
@@ -95,7 +93,7 @@ type ErrorMeta = {
 };
 ```
 
-`TMeta`-tyypin oletusrajoite. Edustaa vain luettavaa objektia, jolla on mielivaltaisia ominaisuuksia.
+`TMeta`-tyypin oletusrajoite. Vain luettava objekti, jolla on mielivaltaisia ominaisuuksia.
 
 ### `ErrorOptions` [#error-options]
 
@@ -109,7 +107,7 @@ type ErrorOptions =
     : { readonly cause?: unknown };
 ```
 
-Suoritusympäristön `Error`-rakentajan toisesta argumentista johdettu tyyppi. Sillä voidaan antaa `cause`-ominaisuuden sisältävät valinnat. Jälkimmäinen haara on vanhojen ympäristöjen varavaihtoehto.
+`Error`-luokan toisesta argumentista johdettu tyyppi. Sillä voidaan antaa `cause`.
 
 ### `MessageFactory<TMeta>` [#message-factory]
 
@@ -119,11 +117,11 @@ interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 }
 ```
 
-Funktio, joka luo viestin `meta`-arvosta. Sitä käytetään sekä rakentajan oletusviestissä että `setErrorMessage`-funktion rekisteröintiarvoissa.
+Funktio, joka luo viestin `meta`-arvosta. Käytetään sekä oletus- että rekisteröidyissä viesteissä.
 
 ### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
 
-Rakentajan argumenttien ylikuormituksia edustava tyyppi.
+Rakentajan argumenttien ylikuormitukset.
 
 ```ts
 type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
@@ -134,7 +132,7 @@ type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
     : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
 ```
 
-Vain kun `TMeta` on `undefined`, `meta`-arvon pois jättävä muoto sallitaan.
+Vain kun `TMeta` on `undefined`, `meta` voidaan jättää pois.
 
 ### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
 
@@ -144,10 +142,9 @@ interface I18nErrorBaseConstructor {
 }
 ```
 
-`setErrorMessage`-funktion ensimmäisen argumentin tyyppi. Sisäisen tunnistesymbolin avulla estetään tyyppitasolla sellaisten luokkien sekoittuminen, jotka eivät peri `I18nErrorBase`-luokkaa.
+`setErrorMessage`-funktion ensimmäisen argumentin tyyppi.
 
 ## Lisätiedot [#notes]
 
-- `message`-ominaisuuden selvityksessä käytettävän `lang`-arvon oletus on `"en"`. Vaihda se erikseen `setGlobalConfig({ lang })` -funktiolla
-- Kielikoodien normalisointia tai varaketjua (esim. siirtymää `en-US`-koodista `en`-koodiin) ei ole. Rekisteröimättömät kielet käyttävät aina oletusviestiä
-- Rekisteröintitiedot säilytetään koko prosessin `WeakMap`-rakenteessa. Jos haluat eristää testit, voit tyhjentää sen muodossa `globalThis.i18n_error_base__message_map = undefined`
+- `lang`-arvon oletus on `"en"`. Vaihda se erikseen `setGlobalConfig({ lang })` -funktiolla
+- Kielikoodien normalisointia tai varaketjua (esim. `en-US` → `en`) ei ole. Rekisteröimättömät kielet käyttävät oletusviestiä

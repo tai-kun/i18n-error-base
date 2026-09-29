@@ -7,13 +7,13 @@ description: Basic operations for defining error classes, registering messages, 
 
 <Steps>
   <Step title="Define an error class">
-    Extend `I18nErrorBase<TMeta>` and define the information you want to use for message generation as `TMeta`.
+    Extend `I18nErrorBase<TMeta>` and define info for message generation in `TMeta`.
   </Step>
   <Step title="Register per-language messages">
     Register the message for each class and language with `setErrorMessage`.
   </Step>
   <Step title="Switch languages and read message">
-    Switch with Valibot's `setGlobalConfig({ lang })` and access `error.message`.
+    Switch with `setGlobalConfig({ lang })` and read `error.message`.
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## Define an error class [#define-error-class]
 
-`TMeta` is the type of the auxiliary information used for message generation. It is kept as `error.meta` and also passed to the function given to `setErrorMessage`.
+`TMeta` is auxiliary info for message generation. It is kept in `error.meta` and passed to registered functions.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-The second constructor argument is a string or a `(meta) => string` function. The third argument accepts the same options as `Error`, such as `{ cause }`.
+The second argument is a string or a `(meta) => string` function. The third is `{ cause }` and other `Error` options.
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-`I18nErrorBase` itself is not intended to be constructed directly with `new`. Always create and use a concrete subclass. Message registrations are distinguished per constructor (`this.constructor`), so a message registered on a parent class is never inherited by a child class.
+Do not use `new` directly; always inherit. Registrations are per-class, so parent registrations are not inherited by children.
 :::
 
 ## Register messages [#register-message]
 
-`setErrorMessage` registers a message factory function for a class and language.
+`setErrorMessage` registers per-class, per-language factory functions.
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-A string is converted internally to `() => text`. Languages can also be specified as an array of strings.
+Strings are also allowed. Languages can be specified as arrays.
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-Re-registering the same class and language overwrites the previous entry. Registration is used only when the constructor at registration time and at lookup time are identical, regardless of `instanceof` checks.
+Re-registering the same class and language overwrites. It applies only when the constructors at registration and lookup match, not via `instanceof`.
 
 :::warning[Watch out for access before registration]
-The function form of the default message is evaluated and cached on first access. If you read `message` in an unregistered language before calling `setErrorMessage`, that default value becomes fixed. As a rule, register per-language messages before creating instances.
+Reading `message` first fixes the default value. Register before creating instances.
 :::
 
 ## Switch languages [#switch-language]
 
-Switch languages with Valibot's global config. `message` refers to the current `lang` on each access.
+Switch with Valibot's global config. `message` refers to the current `lang` on each read.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-The default when `lang` is unset is `"en"`. If a requested language has no registration, it falls back to the default message passed to the constructor.
+Unset `lang` is `"en"`. Unregistered languages use the constructor's default message.
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## Add a prefix [#prefix]
 
-Setting `static prefix` on a class prepends it to the resolved message. It applies to both translated and default messages.
+`static prefix` is prepended to the resolved message. It applies to both translated and default messages.
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-When unset, the message is returned as is with no prefix.
+When unset, it is returned as is.
 
 ## Behavior as an Error [#error-behavior]
 
 - `error instanceof Error`, `instanceof I18nErrorBase`, and `instanceof <concrete class>` are all `true`
-- `message` is enumerable (included in `Object.keys(error)`)
 - `String(error)` / `error.toString()` include the resolved message (e.g. `"Error: ..."`)
-- `cause` is kept via `new TestError(meta, message, { cause })`. As a polyfill for older runtimes, there is handling that assigns `options.cause` when `cause` is not supported
+- `cause` is kept via `{ cause }`
 
 ## Common patterns [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-Callers only need to care about `meta`, which avoids duplicating the default text (English here).
+Callers only pass `meta`, avoiding duplication of the default text.
 
 ### Register multiple languages at once [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-Language codes are not normalized. `"en"` and `"en-US"` are treated as separate keys, so register every code you need explicitly.
+Language codes are not normalized. `"en"` and `"en-US"` are separate keys, so register needed codes explicitly.

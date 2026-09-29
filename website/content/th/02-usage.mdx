@@ -7,13 +7,13 @@ description: การดำเนินการพื้นฐานเกี�
 
 <Steps>
   <Step title="กำหนดคลาสข้อผิดพลาด">
-    สืบทอด `I18nErrorBase<TMeta>` และกำหนดข้อมูลที่ต้องการใช้สร้างข้อความไว้เป็น `TMeta`
+    สืบทอด `I18nErrorBase<TMeta>` และกำหนดข้อมูลสร้างข้อความไว้เป็น `TMeta`
   </Step>
   <Step title="ลงทะเบียนข้อความแยกตามภาษา">
-    ลงทะเบียนข้อความที่สอดคล้องกับคลาสและภาษาด้วย `setErrorMessage`
+    ลงทะเบียนข้อความของแต่ละคลาสและภาษาด้วย `setErrorMessage`
   </Step>
   <Step title="สลับภาษาแล้วอ่าน message">
-    สลับด้วย `setGlobalConfig({ lang })` ของ Valibot แล้วเข้าถึง `error.message`
+    สลับด้วย `setGlobalConfig({ lang })` แล้วอ่าน `error.message`
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## การกำหนดคลาสข้อผิดพลาด [#define-error-class]
 
-`TMeta` คือชนิดของข้อมูลประกอบที่ใช้สร้างข้อความ โดยจะถูกเก็บไว้เป็น `error.meta` และส่งต่อให้ฟังก์ชันของ `setErrorMessage`
+`TMeta` คือข้อมูลประกอบสำหรับสร้างข้อความ เก็บไว้เป็น `error.meta` และส่งให้ฟังก์ชันที่ลงทะเบียน
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-อาร์กิวเมนต์ตัวที่ 2 ของคอนสตรักเตอร์คือสตริงหรือฟังก์ชัน `(meta) => string` ส่วนอาร์กิวเมนต์ตัวที่ 3 สามารถส่งออปชันเช่น `{ cause }` เดียวกับ `Error` ได้
+อาร์กิวเมนต์ตัวที่ 2 คือสตริงหรือฟังก์ชัน `(meta) => string` ตัวที่ 3 คือ `{ cause }` และออปชันอื่นของ `Error`
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -65,7 +65,7 @@ const error = new TestError({ code: "ERR" }, "something went wrong", { cause });
 console.log(error.cause === cause); // true
 ```
 
-หากตั้ง `TMeta` เป็น `undefined` จะสามารถละ `meta` ได้
+หากตั้ง `TMeta` เป็น `undefined` จะละ `meta` ได้
 
 ```ts
 class NoMetaError extends I18nErrorBase<undefined> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-ไม่ได้ออกแบบให้ `new` `I18nErrorBase` โดยตรง โปรดสร้างคลาสคอนกรีตที่สืบทอดก่อนใช้งานเสมอ เนื่องจากปลายทางการลงทะเบียนข้อความจะแยกตามคอนสตรักเตอร์ (`this.constructor`) ข้อความที่ลงทะเบียนในคลาสแม่จะไม่ถูกสืบทอดไปยังคลาสลูก
+อย่าใช้ `new` โดยตรง ให้สืบทอดเสมอ การลงทะเบียนแยกตามคลาส การลงทะเบียนของแม่ไม่ตกทอดถึงลูก
 :::
 
 ## การลงทะเบียนข้อความ [#register-message]
 
-`setErrorMessage` ลงทะเบียนฟังก์ชันสร้างข้อความสำหรับคลาสและภาษา
+`setErrorMessage` ลงทะเบียนฟังก์ชันสร้างข้อความตามคลาสและภาษา
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-หากส่งสตริงจะถูกแปลงเป็น `() => text` ภายใน ภาษาสามารถระบุเป็นอาร์เรย์ของสตริงได้
+ใช้สตริงก็ได้ ระบุภาษาเป็นอาร์เรย์ก็ได้
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-การลงทะเบียนซ้ำในคลาสและภาษาเดิมจะเขียนทับค่าเดิม เนื้อหาที่ลงทะเบียนจะไม่เกี่ยวกับการตัดสิน `instanceof` และจะใช้เฉพาะเมื่อคอนสตรักเตอร์ตอนลงทะเบียนกับตอนอ้างอิงตรงกันเท่านั้น
+การลงทะเบียนซ้ำในคลาสและภาษาเดิมจะเขียนทับ ใช้เฉพาะเมื่อคอนสตรักเตอร์ตอนลงทะเบียนกับตอนอ้างอิงตรงกัน ไม่ใช่ผ่าน `instanceof`
 
 :::warning[ข้อควรระวังการเข้าถึงก่อนลงทะเบียน]
-ข้อความเริ่มต้นในรูปแบบฟังก์ชันจะถูกประเมินและแคชเมื่อเข้าถึงครั้งแรก หากอ่าน `message` ในภาษาที่ยังไม่ได้ลงทะเบียนก่อนเรียก `setErrorMessage` ค่าเริ่มต้นนั้นจะถูกตรึงไว้ โดยหลักแล้วโปรดลงทะเบียนข้อความแยกตามภาษาก่อนสร้างอินสแตนซ์
+อ่าน `message` ก่อนจะตรึงค่าเริ่มต้นไว้ ลงทะเบียนก่อนสร้างอินสแตนซ์
 :::
 
 ## การสลับภาษา [#switch-language]
 
-สลับภาษาด้วยการตั้งค่าโกลบอลของ Valibot โดย `message` จะอ้างอิง `lang` ปัจจุบันทุกครั้งที่มีการเข้าถึง
+สลับด้วยการตั้งค่าโกลบอลของ Valibot `message` จะอ้างอิง `lang` ปัจจุบันทุกครั้งที่อ่าน
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-ค่าเริ่มต้นของ `lang` เมื่อยังไม่ได้ตั้งค่าคือ `"en"` หากขอภาษาที่ยังไม่ได้ลงทะเบียน จะ fallback ไปใช้ข้อความเริ่มต้นที่ส่งให้คอนสตรักเตอร์
+`lang` ที่ยังไม่ตั้งค่าคือ `"en"` ภาษาที่ยังไม่ลงทะเบียนจะใช้ข้อความเริ่มต้นของคอนสตรักเตอร์
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## การใส่คำนำหน้า [#prefix]
 
-หากตั้งค่า `static prefix` ในคลาส จะเชื่อมต่อไว้ที่ด้านหน้าของข้อความที่ resolve แล้ว มีผลทั้งข้อความที่แปลแล้วและข้อความเริ่มต้น
+`static prefix` จะต่อไว้หน้าข้อความที่ resolve แล้ว มีผลทั้งข้อความแปลแล้วและข้อความเริ่มต้น
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-หากไม่ตั้งค่าจะคืนค่าเดิมโดยไม่มีคำนำหน้า
+หากไม่ตั้งค่าจะคืนค่าเดิม
 
 ## พฤติกรรมในฐานะ Error [#error-behavior]
 
 - ทั้ง `error instanceof Error`, `instanceof I18nErrorBase` และ `instanceof คลาสคอนกรีต` ล้วนเป็น `true`
-- `message` สามารถ enumerate ได้ (รวมอยู่ใน `Object.keys(error)`)
 - `String(error)` / `error.toString()` จะมีข้อความที่ resolve แล้ว (เช่น `"Error: ..."`)
-- `cause` จะถูกเก็บไว้ด้วย `new TestError(meta, message, { cause })` ในฐานะ polyfill สำหรับสภาพแวดล้อมรันไทม์เก่า มีการประมวลผลมอบหมาย `options.cause` เมื่อไม่รองรับ `cause`
+- `cause` เก็บไว้ผ่าน `{ cause }`
 
 ## รูปแบบที่ใช้บ่อย [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-ฝั่งผู้เรียกเพียงใส่ใจแค่ `meta` ก็พอ และหลีกเลี่ยงข้อความเริ่มต้น (ในที่นี้คือภาษาอังกฤษ) ที่ซ้ำกันได้
+ฝั่งผู้เรียกส่งแค่ `meta` ก็พอ หลีกเลี่ยงข้อความเริ่มต้นซ้ำกันได้
 
 ### ลงทะเบียนหลายภาษาพร้อมกัน [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-ไม่มีการ normalize รหัสภาษา `"en"` กับ `"en-US"` จะถือเป็นคีย์แยกกัน ดังนั้นโปรดลงทะเบียนรหัสที่ต้องการอย่างชัดเจน
+ไม่มีการ normalize รหัสภาษา `"en"` กับ `"en-US"` เป็นคีย์แยกกัน ลงทะเบียนรหัสที่ต้องการให้ชัดเจน

@@ -3,7 +3,7 @@ title: i18n-error-base
 description: Clasă de bază Error care comută mesajele de eroare în funcție de setarea de limbă a Valibot.
 ---
 
-Clasă de bază pentru extinderea `Error`, care comută dinamic `message` în sincron cu setarea globală de limbă (`lang`) a Valibot.
+Clasă de bază `Error` care comută `message` cu `lang` din Valibot.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -23,45 +23,44 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Resource not found: user
 ```
 
-Deoarece `lang` curent este consultat la fiecare accesare a `message`, puteți schimba limba fără a recrea instanțele. Pentru limbile fără mesaj înregistrat, se revine la mesajul implicit transmis constructorului.
+`message` consultă `lang` la fiecare citire. Comutați fără a recrea instanțele. Limbile neînregistrate folosesc mesajul implicit din constructor.
 
 ## Caracteristici [#features]
 
-- Rezolvă dinamic `message` în sincron cu `getGlobalConfig()` / `setGlobalConfig({ lang })` din Valibot
-- Mesajele pe limbi se înregistrează ulterior cu `setErrorMessage`. Se pot înregistra și funcții care primesc `meta`
-- Pentru limbile fără înregistrare, se revine la mesajul implicit din constructor
-- Adaugă un prefix la începutul mesajului prin `static prefix` la nivel de clasă
-- Păstrează `meta` în constructor și îl transmite funcțiilor de generare a mesajelor
-- Deoarece moștenește `Error`, `instanceof Error`, `cause` și `stack` funcționează ca de obicei
-- Mesajele sunt stocate într-un `WeakMap`, astfel clasele neutilizate pot fi eliberate de garbage collector
+- Rezolvă dinamic `message` cu `setGlobalConfig({ lang })` din Valibot
+- Mesajele pe limbi se înregistrează ulterior cu `setErrorMessage`. Sunt permise și funcții care primesc `meta`
+- Limbile neînregistrate folosesc mesajul implicit din constructor
+- Adaugă un prefix prin `static prefix` la nivel de clasă
+- Păstrează `meta` și îl transmite funcțiilor de generare a mesajelor
+- `instanceof Error`, `cause` și `stack` funcționează ca de obicei
 
 ## Structură [#structure]
 
 <CardGroup cols={2}>
   <Card title="Instalare" href="/ro/installation" icon="download">
-    Adăugarea pachetului și dependența peer de Valibot.
+    Adăugarea pachetului și dependența peer.
   </Card>
   <Card title="Utilizare" href="/ro/usage" icon="book-open">
-    Operații de bază, de la definirea claselor la comutarea limbilor, prefix și fallback.
+    De la definire la comutare, prefix și fallback.
   </Card>
   <Card title="Referință API" href="/ro/api" icon="code">
-    Specificațiile pentru `I18nErrorBase` și `setErrorMessage`, precum și tipurile asociate.
+    Specificațiile `I18nErrorBase` și `setErrorMessage`.
   </Card>
 </CardGroup>
 
 ## Cum funcționează [#how-it-works]
 
-Constructorul `I18nErrorBase` definește `message` ca getter. La fiecare accesare este rezolvat în următoarea ordine.
+`message` este rezolvat la fiecare citire în ordinea următoare.
 
 1. Obține `lang` din `getGlobalConfig()`. Când nu este setat, este `"en"`
-2. Dacă există o funcție `(clasă × lang)` înregistrată cu `setErrorMessage`, o execută cu `meta`
-3. În caz contrar, returnează mesajul implicit transmis constructorului (un șir sau rezultatul unei funcții)
+2. Dacă există o înregistrare `(clasă × lang)`, o execută cu `meta`
+3. În caz contrar, returnează mesajul implicit din constructor
 4. Dacă `static prefix` este setat, îl adaugă la început
 
 :::tip
-Forma funcțională a mesajului implicit este evaluată la primul acces și apoi memorată în cache. Mesajele pentru limbile înregistrate sunt regenerate din `meta` la fiecare accesare, astfel comutarea limbii se reflectă imediat.
+Mesajele înregistrate sunt regenerate din `meta` la fiecare citire, astfel comutarea se reflectă imediat.
 :::
 
 ## Pașii următori [#next-steps]
 
-Începeți cu [Instalarea](/ro/installation), apoi parcurgeți fluxul complet în [Utilizare](/ro/usage). Detaliile despre tipuri și argumente sunt prezentate în [Referința API](/ro/api).
+Începeți cu [Instalarea](/ro/installation), apoi vedeți fluxul în [Utilizare](/ro/usage). Detaliile sunt în [Referința API](/ro/api).

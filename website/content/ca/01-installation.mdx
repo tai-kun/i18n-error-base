@@ -8,7 +8,7 @@ description: Com instal·lar i18n-error-base i els requisits de funcionament.
 - Un entorn d'execució que pugui gestionar mòduls ES, com Node.js
 - Cal `valibot@^1.0.0` com a dependència d'iguals
 
-`I18nErrorBase` consulta internament `getGlobalConfig()` de Valibot per obtenir el `lang` actual. Fins i tot en projectes que no utilitzen Valibot, n'hi ha prou amb cridar `setGlobalConfig({ lang })` només per canviar d'idioma.
+`message` segueix `lang` de `getGlobalConfig()` de Valibot.
 
 ## Instal·lació [#installation]
 
@@ -23,7 +23,7 @@ npm i valibot
 ```
 
 :::warning[Atenció a la dependència d'iguals]
-`i18n-error-base` no inclou `valibot`. Si l'amfitrió no proporciona `valibot@^1.0.0`, la importació donarà un error de resolució.
+`valibot` no s'inclou. Sense `valibot@^1.0.0`, la importació no es pot resoldre.
 :::
 
 ## Importació [#import]
@@ -33,17 +33,6 @@ import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
 import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
 ```
 
-També es proporciona una exportació per defecte.
-
-```ts
-import I18nErrorBase from "i18n-error-base";
-import setErrorMessage from "i18n-error-base";
-```
-
-:::note
-El paquet es distribueix com a ESM (`"type": "module"`) sense efectes secundaris (`"sideEffects": false`). Les definicions de tipus es resolen des de `dist/src/*.d.ts`.
-:::
-
 ## Següents passos [#next-steps]
 
-Consulteu [Ús](/ca/usage) per a la definició de classes d'error i els conceptes bàsics del canvi d'idioma.
+Consulteu [Ús](/ca/usage) per a la definició i els conceptes bàsics del canvi d'idioma.

@@ -8,7 +8,7 @@ description: Način instalacije paketa i18n-error-base i radni zahtjevi.
 - Izvršno okruženje koje može rukovati ES modulima, poput Node.js
 - Kao peer ovisnost potreban je `valibot@^1.0.0`
 
-`I18nErrorBase` interno referencira Valibot metodu `getGlobalConfig()` kako bi dohvatio trenutni `lang`. Čak i u projektima koji ne koriste Valibot, dovoljno je pozvati `setGlobalConfig({ lang })` samo radi prebacivanja jezika.
+`message` slijedi `lang` iz Valibot metode `getGlobalConfig()`.
 
 ## Instalacija [#installation]
 
@@ -23,7 +23,7 @@ npm i valibot
 ```
 
 :::warning[Pozor na peer ovisnost]
-`i18n-error-base` ne uključuje `valibot`. Ako domaćin ne pripremi `valibot@^1.0.0`, doći će do pogreške razrješavanja pri uvozu.
+`valibot` nije uključen. Bez `valibot@^1.0.0` uvoz se ne može razriješiti.
 :::
 
 ## Uvoz [#import]
@@ -33,17 +33,6 @@ import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
 import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
 ```
 
-Dostupan je i zadani izvoz.
-
-```ts
-import I18nErrorBase from "i18n-error-base";
-import setErrorMessage from "i18n-error-base";
-```
-
-:::note
-Paket se distribuira kao ESM (`"type": "module"`) i nema nuspojava (`"sideEffects": false`). Definicije tipova razrješavaju se iz `dist/src/*.d.ts`.
-:::
-
 ## Sljedeći koraci [#next-steps]
 
-U [korištenju](/hr/usage) provjerite osnove definiranja klase pogreške i prebacivanja jezika.
+Pogledajte [korištenje](/hr/usage) za osnove definiranja i prebacivanja.

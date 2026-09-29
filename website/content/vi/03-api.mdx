@@ -5,7 +5,7 @@ description: Đặc tả của I18nErrorBase, setErrorMessage và các type liê
 
 ## `I18nErrorBase` [#i18n-error-base]
 
-Là lớp cơ sở để kế thừa `Error`. Định nghĩa lại `message` dưới dạng getter và giải quyết động theo `lang` của Valibot.
+Lớp cơ sở để kế thừa `Error`. `message` giải quyết theo `lang`.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -17,21 +17,21 @@ class MyError extends I18nErrorBase<{ code: string }> {}
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Kiểu thông tin bổ sung được giữ dưới dạng `meta`. Nếu không dùng, chỉ định `undefined`. |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Kiểu của `meta`. Nếu không dùng, chỉ định `undefined`. |
 
 ### Thuộc tính static [#static-props]
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `prefix?` | `string` | `undefined` | Nếu thiết lập, sẽ nối vào đầu thông báo đã giải quyết. |
+| `prefix?` | `string` | `undefined` | Nối vào đầu thông báo đã giải quyết. |
 
 ### Thuộc tính instance [#instance-props]
 
 | Prop | Type | Description |
 | ---- | ---- | ----------- |
-| `meta` | `TMeta` | Thông tin bổ sung đã truyền vào constructor. Có thể đọc/ghi. |
-| `message` | `string` | Thông báo được giải quyết theo `lang` hiện tại. Có thể liệt kê được. |
-| `cause` | `unknown` | Nguyên nhân đã truyền bằng `ErrorOptions`. Là thuộc tính chuẩn của `Error`. |
+| `meta` | `TMeta` | Thông tin bổ trợ từ constructor. Đọc/ghi được. |
+| `message` | `string` | Giải quyết theo `lang` hiện tại. Liệt kê được. |
+| `cause` | `unknown` | Nguyên nhân qua `ErrorOptions`. Thuộc tính chuẩn của `Error`. |
 
 ### Constructor [#constructor]
 
@@ -50,21 +50,19 @@ new MyError(meta, message, options?)
 
 | Tham số | Kiểu | Mô tả |
 | ------------ | -- | ---- |
-| `meta` | `TMeta` | Thông tin bổ sung dùng để tạo thông báo. |
-| `message` | `string \| MessageFactory<TMeta>` | Thông báo mặc định dùng cho ngôn ngữ chưa đăng ký. Nếu là hàm, nó nhận `meta`. |
+| `meta` | `TMeta` | Thông tin bổ trợ để tạo thông báo. |
+| `message` | `string \| MessageFactory<TMeta>` | Thông báo mặc định cho ngôn ngữ chưa đăng ký. Hàm nhận `meta`. |
 | `options` | `ErrorOptions` | Option tương thích với tham số thứ 2 của `Error` (`{ cause }` v.v.). |
-
-Nếu truyền giá trị không phải chuỗi (như số) cho `message`, nó sẽ được chuyển thành chuỗi bằng `String(...)`. Nếu message factory trả về chuỗi rỗng, `message` cũng sẽ là chuỗi rỗng.
 
 ### Thứ tự giải quyết [#resolution-order]
 
 1. Lấy `lang` của `getGlobalConfig()` (khi chưa thiết lập là `"en"`)
-2. Thực thi hàm của class và ngôn ngữ đó đã đăng ký bằng `setErrorMessage` kèm `meta`
-3. Nếu chưa đăng ký, dùng thông báo mặc định của constructor (chuỗi hoặc kết quả đánh giá hàm. Cache sau lần đánh giá đầu tiên)
-4. Nếu có `static prefix`, nối nó vào đầu thông báo
+2. Chạy hàm đã đăng ký cho class và ngôn ngữ đó kèm `meta`
+3. Nếu chưa đăng ký, dùng thông báo mặc định
+4. Nếu có `static prefix`, nối vào đầu
 
 :::note
-Việc khớp đăng ký là so khớp chính xác `this.constructor`. Đăng ký ở class cha sẽ không được kế thừa bởi class con. Hãy đăng ký cho từng class cần thiết.
+Đăng ký theo từng class. Đăng ký của cha không kế thừa. Hãy đăng ký từng class.
 :::
 
 ## `setErrorMessage` [#set-error-message]
@@ -79,11 +77,11 @@ setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
 
 | Tham số | Kiểu | Mô tả |
 | ------------ | -- | ---- |
-| `reference` | `I18nErrorBaseConstructor` | Class kế thừa `I18nErrorBase`. Class không kế thừa sẽ gây lỗi type. |
-| `message` | `string \| (meta) => string` | Thông báo cần đăng ký. Kiểu của `meta` được suy luận từ `meta` của class đích. |
-| `lang` | `string \| Iterable<string>` | Ngôn ngữ đích. Một mã đơn hoặc đối tượng iterable của các mã (như mảng). |
+| `reference` | `I18nErrorBaseConstructor` | Class kế thừa `I18nErrorBase`. Ngược lại lỗi type. |
+| `message` | `string \| (meta) => string` | Thông báo đăng ký. Kiểu `meta` suy ra từ class đích. |
+| `lang` | `string \| Iterable<string>` | Ngôn ngữ đích. Một mã đơn hoặc iterable (như mảng). |
 
-Chuỗi được chuyển thành hàm và lưu trữ bên trong. Đăng ký lại cùng class và ngôn ngữ sẽ ghi đè. Nơi lưu là `WeakMap` của `globalThis.i18n_error_base__message_map`, với key là class và value là `Map` từ ngôn ngữ tới hàm.
+Đăng ký lại cùng class và ngôn ngữ sẽ ghi đè.
 
 ## Type [#types]
 
@@ -95,7 +93,7 @@ type ErrorMeta = {
 };
 ```
 
-Là ràng buộc mặc định của `TMeta`. Biểu thị đối tượng chỉ đọc có thuộc tính tùy ý.
+Ràng buộc mặc định của `TMeta`. Đối tượng chỉ đọc có thuộc tính tùy ý.
 
 ### `ErrorOptions` [#error-options]
 
@@ -109,7 +107,7 @@ type ErrorOptions =
     : { readonly cause?: unknown };
 ```
 
-Là type suy ra từ tham số thứ 2 của constructor `Error` trong môi trường thực thi. Có thể truyền option bao gồm `cause`. Nhánh sau là fallback cho môi trường cũ.
+Type suy ra từ tham số thứ 2 của `Error`. Có thể truyền `cause`.
 
 ### `MessageFactory<TMeta>` [#message-factory]
 
@@ -119,11 +117,11 @@ interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 }
 ```
 
-Là hàm tạo thông báo từ `meta`. Có thể dùng cho cả thông báo mặc định của constructor và giá trị đăng ký của `setErrorMessage`.
+Hàm tạo thông báo từ `meta`. Dùng cho cả mặc định và đã đăng ký.
 
 ### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
 
-Là type biểu thị overload của tham số constructor.
+Overload tham số constructor.
 
 ```ts
 type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
@@ -134,7 +132,7 @@ type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
     : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
 ```
 
-Chỉ khi `TMeta` là `undefined`, dạng rút gọn bỏ qua `meta` mới được cho phép.
+Chỉ khi `TMeta` là `undefined` mới được bỏ `meta`.
 
 ### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
 
@@ -144,10 +142,9 @@ interface I18nErrorBaseConstructor {
 }
 ```
 
-Là type của tham số thứ nhất của `setErrorMessage`. Nhờ symbol nhận dạng nội bộ, việc lẫn class không kế thừa `I18nErrorBase` bị ngăn ở cấp độ type.
+Type của tham số thứ nhất của `setErrorMessage`.
 
 ## Ghi chú bổ sung [#notes]
 
-- Giá trị mặc định của `lang` dùng để giải quyết `message` là `"en"`. Hãy chuyển rõ ràng bằng `setGlobalConfig({ lang })`
-- Không có chuẩn hóa mã ngôn ngữ hay chuỗi fallback (ví dụ: từ `en-US` về `en`). Ngôn ngữ chưa đăng ký đều thành thông báo mặc định
-- Dữ liệu đăng ký được giữ trong `WeakMap` toàn cục của process. Nếu muốn cô lập trong test, có thể hủy bằng `globalThis.i18n_error_base__message_map = undefined`
+- Mặc định `lang` là `"en"`. Hãy chuyển rõ ràng bằng `setGlobalConfig({ lang })`
+- Không chuẩn hóa mã ngôn ngữ hay chuỗi fallback (ví dụ `en-US` → `en`). Ngôn ngữ chưa đăng ký thành thông báo mặc định

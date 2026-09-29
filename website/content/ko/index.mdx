@@ -3,7 +3,7 @@ title: i18n-error-base
 description: Valibot의 언어 설정과 연동하여 오류 메시지를 전환하는 Error의 베이스 클래스입니다.
 ---
 
-Valibot의 글로벌 언어 설정(`lang`)과 연동하여 `message`를 동적으로 전환하는, `Error` 상속을 위한 베이스 클래스입니다.
+Valibot의 `lang`과 연동하여 `message`를 전환하는 `Error` 베이스 클래스입니다.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -23,45 +23,44 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Resource not found: user
 ```
 
-`message`에 접근할 때마다 그 시점의 `lang`을 참조하므로, 인스턴스를 다시 만들지 않고도 언어를 전환할 수 있습니다. 등록되지 않은 언어에서는 생성자에 전달한 기본 메시지로 폴백합니다.
+`message`는 읽을 때마다 `lang`을 참조합니다. 다시 만들지 않고 전환할 수 있습니다. 미등록 언어는 생성자의 기본 메시지를 사용합니다.
 
 ## 특징 [#features]
 
-- Valibot의 `getGlobalConfig()` / `setGlobalConfig({ lang })`과 연동하여 `message`를 동적으로 해결합니다
-- 언어별 메시지는 `setErrorMessage`로 나중에 등록합니다. `meta`를 받는 함수도 등록할 수 있습니다
-- 등록되지 않은 언어에서는 생성자의 기본 메시지로 폴백합니다
-- 클래스 단위의 `static prefix`로 메시지 앞에 접두사를 추가할 수 있습니다
-- `meta`를 생성자에서 보관하고 메시지 생성 함수에 전달합니다
-- `Error`를 상속하므로 `instanceof Error`, `cause`, `stack`을 그대로 사용할 수 있습니다
-- 메시지 저장소는 `WeakMap`이므로, 더 이상 필요 없는 클래스는 가비지 컬렉션됩니다
+- Valibot의 `setGlobalConfig({ lang })`과 연동하여 `message`를 동적으로 해결합니다
+- `setErrorMessage`로 언어별 메시지를 나중에 등록합니다. `meta`를 받는 함수도 사용할 수 있습니다
+- 미등록 언어는 생성자의 기본 메시지를 사용합니다
+- 클래스별 `static prefix`로 앞에 접두사를 추가합니다
+- `meta`를 보관하고 메시지 생성 함수에 전달합니다
+- `instanceof Error`, `cause`, `stack`을 그대로 사용할 수 있습니다
 
 ## 구성 [#structure]
 
 <CardGroup cols={2}>
   <Card title="설치" href="/ko/installation" icon="download">
-    패키지 추가와 Valibot 피어 의존성에 대한 설명입니다.
+    패키지 추가와 피어 의존성 방법입니다.
   </Card>
   <Card title="사용법" href="/ko/usage" icon="book-open">
-    클래스 정의부터 언어 전환, prefix, 폴백까지의 기본 동작입니다.
+    정의부터 전환, prefix, 폴백까지 다룹니다.
   </Card>
   <Card title="API 레퍼런스" href="/ko/api" icon="code">
-    `I18nErrorBase`와 `setErrorMessage`, 관련 타입의 사양입니다.
+    `I18nErrorBase`와 `setErrorMessage`의 사양입니다.
   </Card>
 </CardGroup>
 
 ## 동작 방식 [#how-it-works]
 
-`I18nErrorBase`의 생성자는 `message`를 게터로 정의합니다. 접근할 때마다 다음 순서대로 해결합니다.
+`message`는 읽을 때마다 다음 순서로 해결됩니다.
 
 1. `getGlobalConfig()`에서 `lang`을 가져옵니다. 설정되지 않은 경우는 `"en"`입니다
-2. `setErrorMessage`로 등록된 (클래스 × lang) 함수가 있으면 `meta`를 전달하여 실행합니다
-3. 없으면 생성자에 전달한 문자열 또는 함수의 결과(기본 메시지)를 반환합니다
+2. (클래스 × lang) 등록이 있으면 `meta`를 전달하여 실행합니다
+3. 없으면 생성자의 기본 메시지를 반환합니다
 4. `static prefix`가 설정되어 있으면 앞에 연결합니다
 
 :::tip
-기본 메시지의 함수 형태는 첫 접근 시에 평가되며, 이후에는 캐시됩니다. 등록된 언어의 메시지는 접근할 때마다 `meta`로부터 다시 생성되므로, 언어 전환이 즉시 반영됩니다.
+등록된 메시지는 읽을 때마다 `meta`에서 생성되므로, 전환이 즉시 반영됩니다.
 :::
 
 ## 다음 단계 [#next-steps]
 
-먼저 [설치](/ko/installation)부터 시작하여, [사용법](/ko/usage)에서 전체 흐름을 확인하십시오. 타입과 인수의 자세한 내용은 [API 레퍼런스](/ko/api)에 정리되어 있습니다.
+[설치](/ko/installation)부터 시작하여, [사용법](/ko/usage)에서 흐름을 확인하십시오. 자세한 내용은 [API 레퍼런스](/ko/api)에 정리되어 있습니다.

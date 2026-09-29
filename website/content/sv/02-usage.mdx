@@ -7,13 +7,13 @@ description: Grundläggande åtgärder för att definiera felklasser, registrera
 
 <Steps>
   <Step title="Definiera en felklass">
-    Ärv `I18nErrorBase<TMeta>` och definiera den information du vill använda för meddelandegenerering som `TMeta`.
+    Ärv `I18nErrorBase<TMeta>` och definiera info för meddelandegenerering i `TMeta`.
   </Step>
   <Step title="Registrera meddelanden per språk">
-    Registrera meddelandet för varje klass och språk med `setErrorMessage`.
+    Registrera meddelandet per klass och språk med `setErrorMessage`.
   </Step>
   <Step title="Byt språk och läs message">
-    Byt med Valibots `setGlobalConfig({ lang })` och läs `error.message`.
+    Byt med `setGlobalConfig({ lang })` och läs `error.message`.
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## Definiera en felklass [#define-error-class]
 
-`TMeta` är typen för den tilläggsinformation som används för meddelandegenerering. Den behålls som `error.meta` och skickas även till funktionen som ges till `setErrorMessage`.
+`TMeta` är hjälpeinfo för meddelandegenerering. Den behålls som `error.meta` och skickas till registrerade funktioner.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-Konstruktorns andra argument är en sträng eller en `(meta) => string`-funktion. Det tredje argumentet accepterar samma alternativ som `Error`, t.ex. `{ cause }`.
+Konstruktorns andra argument är en sträng eller en `(meta) => string`-funktion. Det tredje är `{ cause }` och andra `Error`-alternativ.
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-`I18nErrorBase` i sig är inte avsedd att konstrueras direkt med `new`. Skapa och använd alltid en konkret underklass. Meddelanderegistreringar särskiljs per konstruktor (`this.constructor`), så ett meddelande som registrerats på en föräldraklass ärvs aldrig av en barnklass.
+Använd inte `new` direkt; ärv alltid. Registreringar är per klass, så registreringar på en föräldraklass ärvs inte av barn.
 :::
 
 ## Registrera meddelanden [#register-message]
 
-`setErrorMessage` registrerar en funktion som skapar meddelanden för en klass och ett språk.
+`setErrorMessage` registrerar fabriksfunktioner per klass och språk.
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-En sträng konverteras internt till `() => text`. Språk kan också anges som en array av strängar.
+Strängar är också tillåtna. Språk kan anges som arrayer.
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-Om samma klass och språk registreras igen skrivs den tidigare posten över. Registreringen används endast när konstruktorn vid registreringstillfället och vid uppslagningstillfället är identiska, oberoende av `instanceof`-kontroller.
+Omregistrering av samma klass och språk skriver över. Den gäller endast när konstruktorerna vid registrering och uppslagning är identiska, inte via `instanceof`.
 
 :::warning[Se upp för åtkomst före registrering]
-Standardmeddelandets funktionsform utvärderas och cachas vid första åtkomsten. Om du läser `message` på ett oregistrerat språk innan du anropar `setErrorMessage` blir det standardvärdet fixerat. Registrera meddelanden per språk som regel innan du skapar instanser.
+Att läsa `message` först fixerar standardvärdet. Registrera innan du skapar instanser.
 :::
 
 ## Byta språk [#switch-language]
 
-Byt språk med Valibots globala konfiguration. `message` refererar till aktuell `lang` vid varje åtkomst.
+Byt med Valibots globala konfiguration. `message` refererar till aktuell `lang` vid varje åtkomst.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-Standard när `lang` inte är inställd är `"en"`. Om ett begärt språk saknar registrering faller det tillbaka på standardmeddelandet som skickades till konstruktorn.
+Oinställd `lang` är `"en"`. Oregistrerade språk använder konstruktorns standardmeddelande.
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## Lägga till ett prefix [#prefix]
 
-Om `static prefix` sätts på en klass läggs det till i början av det lösta meddelandet. Det gäller både översatta meddelanden och standardmeddelanden.
+`static prefix` läggs till i början av det lösta meddelandet. Det gäller både översatta meddelanden och standardmeddelanden.
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-När det inte är inställt returneras meddelandet som det är utan prefix.
+När det inte är inställt returneras meddelandet som det är.
 
 ## Beteende som Error [#error-behavior]
 
 - `error instanceof Error`, `instanceof I18nErrorBase` och `instanceof <konkret klass>` är alla `true`
-- `message` är uppräkningsbar (ingår i `Object.keys(error)`)
 - `String(error)` / `error.toString()` inkluderar det lösta meddelandet (t.ex. `"Error: ..."`)
-- `cause` behålls via `new TestError(meta, message, { cause })`. Som polyfill för äldre körningsmiljöer finns hantering som tilldelar `options.cause` när `cause` inte stöds
+- `cause` behålls via `{ cause }`
 
 ## Vanliga mönster [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-Anropare behöver bara bry sig om `meta`, vilket undviker duplicering av standardtexten (engelska här).
+Anropare skickar bara `meta`, vilket undviker duplicering av standardtexten.
 
 ### Registrera flera språk samtidigt [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-Språkkoder normaliseras inte. `"en"` och `"en-US"` behandlas som separata nycklar, så registrera varje kod du behöver uttryckligen.
+Språkkoder normaliseras inte. `"en"` och `"en-US"` är separata nycklar, så registrera behövda koder explicit.

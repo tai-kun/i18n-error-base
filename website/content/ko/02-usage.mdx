@@ -7,13 +7,13 @@ description: 오류 클래스의 정의, 메시지 등록, 언어 전환, prefix
 
 <Steps>
   <Step title="오류 클래스를 정의합니다">
-    `I18nErrorBase<TMeta>`를 상속하고, 메시지 생성에 사용하려는 정보를 `TMeta`로 정의합니다.
+    `I18nErrorBase<TMeta>`를 상속하고, 메시지 생성용 정보를 `TMeta`로 정의합니다.
   </Step>
   <Step title="언어별 메시지를 등록합니다">
-    `setErrorMessage`로 클래스와 언어에 대응하는 메시지를 등록합니다.
+    `setErrorMessage`로 클래스와 언어의 메시지를 등록합니다.
   </Step>
   <Step title="언어를 전환하여 message를 읽습니다">
-    Valibot의 `setGlobalConfig({ lang })`로 전환하고, `error.message`에 접근합니다.
+    `setGlobalConfig({ lang })`으로 전환하고, `error.message`를 읽습니다.
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## 오류 클래스 정의 [#define-error-class]
 
-`TMeta`는 메시지 생성에 사용하는 부가 정보의 타입입니다. `error.meta`로 보관되며, `setErrorMessage`의 함수에도 전달됩니다.
+`TMeta`는 메시지 생성용 부가 정보입니다. `error.meta`에 보관되고, 등록 함수에도 전달됩니다.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-생성자의 두 번째 인수는 문자열 또는 `(meta) => string` 함수입니다. 세 번째 인수에는 `Error`와 동일한 `{ cause }` 등의 옵션을 전달할 수 있습니다.
+두 번째 인수는 문자열 또는 `(meta) => string`입니다. 세 번째 인수는 `Error`와 같은 `{ cause }` 등입니다.
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-`I18nErrorBase` 자체를 직접 `new`로 생성하는 것은 의도하지 않았습니다. 반드시 상속한 구체 클래스를 만들어 사용하십시오. 메시지 등록 대상은 생성자 단위(`this.constructor`)로 구분되므로, 부모 클래스에 등록한 메시지가 자식 클래스에 상속되지 않습니다.
+직접 `new`하지 말고, 반드시 상속하여 사용하십시오. 등록은 클래스별이므로, 부모에 대한 등록은 자식에 상속되지 않습니다.
 :::
 
 ## 메시지 등록 [#register-message]
 
-`setErrorMessage`는 클래스와 언어에 대한 메시지 생성 함수를 등록합니다.
+`setErrorMessage`로 클래스와 언어별 생성 함수를 등록합니다.
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-문자열을 전달하면 내부에서 `() => text`로 변환됩니다. 언어는 문자열 배열로도 지정할 수 있습니다.
+문자열도 지정할 수 있습니다. 언어는 배열로도 지정할 수 있습니다.
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-동일한 클래스와 언어에 다시 등록하면 덮어씁니다. 등록 내용은 `instanceof` 판정과 무관하게, 등록 시와 참조 시의 생성자가 동일할 때만 사용됩니다.
+동일한 클래스와 언어에 다시 등록하면 덮어씁니다. `instanceof`가 아니라, 등록 시와 참조 시의 생성자가 일치할 때만 사용합니다.
 
 :::warning[등록 전 접근 주의]
-기본 메시지의 함수 형태는 첫 접근 시에 평가하여 캐시됩니다. `setErrorMessage`보다 먼저 미등록 언어로 `message`를 읽으면, 그 기본값이 고정됩니다. 언어별 메시지는 원칙적으로 인스턴스 생성보다 먼저 등록하십시오.
+`message`를 먼저 읽으면 기본값으로 고정됩니다. 인스턴스 생성보다 먼저 등록하십시오.
 :::
 
 ## 언어 전환 [#switch-language]
 
-언어는 Valibot의 글로벌 설정으로 전환합니다. `message`는 접근할 때마다 현재 `lang`을 참조합니다.
+Valibot의 글로벌 설정으로 전환합니다. `message`는 읽을 때마다 현재 `lang`을 참조합니다.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-`lang`이 설정되지 않은 경우 기본값은 `"en"`입니다. 등록되지 않은 언어를 요청한 경우에는 생성자에 전달한 기본 메시지로 폴백합니다.
+설정되지 않은 `lang`은 `"en"`입니다. 미등록 언어는 생성자의 기본 메시지를 사용합니다.
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## 접두사 추가 [#prefix]
 
-클래스에 `static prefix`를 설정하면, 해결된 메시지 앞에 연결됩니다. 번역된 메시지와 기본 메시지 모두에 적용됩니다.
+`static prefix`는 해결된 메시지 앞에 붙입니다. 번역·기본 모두에 적용됩니다.
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-설정하지 않은 경우 접두사 없이 그대로 반환됩니다.
+설정하지 않으면 그대로 반환됩니다.
 
 ## Error로서의 동작 [#error-behavior]
 
-- `error instanceof Error`, `instanceof I18nErrorBase`, `instanceof` 구체 클래스 중 어느 것도 `true`입니다
-- `message`는 열거 가능합니다(`Object.keys(error)`에 포함됩니다)
+- `error instanceof Error`, `instanceof I18nErrorBase`, `instanceof` 구체 클래스 모두 `true`입니다
 - `String(error)` / `error.toString()`은 해결된 메시지를 포함합니다(예: `"Error: ..."`)
-- `cause`는 `new TestError(meta, message, { cause })`로 보관됩니다. 오래된 실행 환경용 폴리필로, `cause`를 지원하지 않을 때 `options.cause`를 대입하는 처리가 포함되어 있습니다
+- `cause`는 `{ cause }`로 보관합니다
 
 ## 자주 사용하는 패턴 [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-호출하는 쪽에서는 `meta`만 신경 쓰면 되므로, 기본 문구(여기서는 영어)의 중복을 피할 수 있습니다.
+호출하는 쪽은 `meta`만 전달하면 되므로, 기본 문구의 중복을 피할 수 있습니다.
 
 ### 여러 언어를 한 번에 등록합니다 [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-언어 코드의 정규화는 수행되지 않습니다. `"en"`과 `"en-US"`는 별도의 키로 취급되므로, 필요한 코드는 명시적으로 등록하십시오.
+언어 코드는 정규화하지 않습니다. `"en"`과 `"en-US"`는 별도의 키이므로, 필요한 코드는 명시적으로 등록하십시오.

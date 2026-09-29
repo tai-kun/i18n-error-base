@@ -5,7 +5,7 @@ description: Specificațiile pentru I18nErrorBase, setErrorMessage și tipurile 
 
 ## `I18nErrorBase` [#i18n-error-base]
 
-Clasă de bază pentru extinderea `Error`. Redefinește `message` ca getter și îl rezolvă dinamic în funcție de `lang` din Valibot.
+Clasă de bază pentru extinderea `Error`. `message` se rezolvă în funcție de `lang`.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -17,21 +17,21 @@ class MyError extends I18nErrorBase<{ code: string }> {}
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Tipul informațiilor auxiliare păstrate ca `meta`. Specificați `undefined` atunci când nu le utilizați. |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Tipul `meta`. Specificați `undefined` când nu este folosit. |
 
 ### Proprietăți statice [#static-props]
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `prefix?` | `string` | `undefined` | Când este setat, este adăugat la începutul mesajului rezolvat. |
+| `prefix?` | `string` | `undefined` | Adăugat la începutul mesajului rezolvat. |
 
 ### Proprietăți de instanță [#instance-props]
 
 | Prop | Type | Description |
 | ---- | ---- | ----------- |
-| `meta` | `TMeta` | Informațiile auxiliare transmise constructorului. Pot fi citite și scrise. |
-| `message` | `string` | Mesajul rezolvat pentru `lang` curent. Enumerabil. |
-| `cause` | `unknown` | Cauza transmisă prin `ErrorOptions`. Proprietate standard a `Error`. |
+| `meta` | `TMeta` | Datele auxiliare ale constructorului. Pot fi citite și scrise. |
+| `message` | `string` | Rezolvat în funcție de `lang`. Enumerabil. |
+| `cause` | `unknown` | Cauza din `ErrorOptions`. Proprietate standard a `Error`. |
 
 ### Constructor [#constructor]
 
@@ -50,26 +50,24 @@ new MyError(meta, message, options?)
 
 | Parametru | Tip | Descriere |
 | --------- | --- | --------- |
-| `meta` | `TMeta` | Informațiile auxiliare folosite pentru generarea mesajelor. |
-| `message` | `string \| MessageFactory<TMeta>` | Mesajul implicit folosit pentru limbile fără înregistrare. Când este o funcție, primește `meta`. |
+| `meta` | `TMeta` | Datele auxiliare pentru generarea mesajului. |
+| `message` | `string \| MessageFactory<TMeta>` | Mesajul implicit pentru limbile fără înregistrare. Funcțiile primesc `meta`. |
 | `options` | `ErrorOptions` | Opțiuni compatibile cu al doilea argument al `Error` (cum ar fi `{ cause }`). |
-
-Transmiterea unei valori non-șir (cum ar fi un număr) ca `message` o convertește în șir cu `String(...)`. Când o fabrică de mesaje returnează un șir gol, și `message` este un șir gol.
 
 ### Ordinea de rezolvare [#resolution-order]
 
 1. Obține `lang` din `getGlobalConfig()` (`"en"` când nu este setat)
-2. Execută funcția înregistrată cu `setErrorMessage` pentru acea clasă și limbă, cu `meta`
-3. Când nu există înregistrare, folosește mesajul implicit din constructor (un șir sau rezultatul evaluat al unei funcții; memorat în cache după prima evaluare)
+2. Execută funcția înregistrată pentru acea clasă și limbă, cu `meta`
+3. Când nu există înregistrare, folosește mesajul implicit
 4. Dacă `static prefix` este setat, îl adaugă la început
 
 :::note
-Înregistrările sunt comparate prin egalitate strictă pe `this.constructor`. Înregistrările de pe o clasă părinte nu sunt moștenite de clasele copil. Înregistrați fiecare clasă necesară.
+Înregistrările sunt per clasă. Înregistrările părintelui nu se moștenesc. Înregistrați fiecare clasă.
 :::
 
 ## `setErrorMessage` [#set-error-message]
 
-Înregistrează o funcție de creare a mesajelor pentru fiecare limbă.
+Înregistrează funcții de creare a mesajelor pentru fiecare limbă.
 
 ```ts
 import { setErrorMessage } from "i18n-error-base";
@@ -79,11 +77,11 @@ setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
 
 | Parametru | Tip | Descriere |
 | --------- | --- | --------- |
-| `reference` | `I18nErrorBaseConstructor` | O clasă care extinde `I18nErrorBase`. Clasele care nu o extind reprezintă o eroare de tip. |
-| `message` | `string \| (meta) => string` | Mesajul de înregistrat. Tipul `meta` este dedus din `meta` al clasei țintă. |
-| `lang` | `string \| Iterable<string>` | Limba țintă. Un singur cod sau un obiect iterabil de coduri (cum ar fi un tablou). |
+| `reference` | `I18nErrorBaseConstructor` | O clasă care extinde `I18nErrorBase`. Alte clase sunt eroare de tip. |
+| `message` | `string \| (meta) => string` | Mesajul de înregistrat. `meta` este dedus din clasa țintă. |
+| `lang` | `string \| Iterable<string>` | Limba țintă. Un singur cod sau un obiect iterabil (cum ar fi un tablou). |
 
-Șirurile sunt convertite intern în funcții înainte de a fi stocate. Reînregistrarea aceleiași clase și limbi suprascrie intrarea anterioară. Datele sunt stocate în `WeakMap`-ul de la `globalThis.i18n_error_base__message_map`, cu cheia clasa și valori care mapează limbile la funcții.
+Reînregistrarea aceleiași clase și limbi suprascrie intrarea.
 
 ## Tipuri [#types]
 
@@ -95,7 +93,7 @@ type ErrorMeta = {
 };
 ```
 
-Constrângerea implicită pentru `TMeta`. Reprezintă un obiect readonly cu proprietăți arbitrare.
+Constrângerea implicită pentru `TMeta`. Un obiect readonly cu proprietăți arbitrare.
 
 ### `ErrorOptions` [#error-options]
 
@@ -109,7 +107,7 @@ type ErrorOptions =
     : { readonly cause?: unknown };
 ```
 
-Un tip derivat din al doilea argument al constructorului `Error` al mediului de execuție. Puteți transmite opțiuni care includ `cause`. Ultima ramură este o alternativă pentru mediile mai vechi.
+Un tip derivat din al doilea argument al `Error`. Puteți transmite `cause`.
 
 ### `MessageFactory<TMeta>` [#message-factory]
 
@@ -119,11 +117,11 @@ interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 }
 ```
 
-O funcție care generează un mesaj din `meta`. Este folosită atât pentru mesajul implicit al constructorului, cât și pentru valorile înregistrate cu `setErrorMessage`.
+O funcție care generează un mesaj din `meta`. Folosită pentru mesajele implicite și cele înregistrate.
 
 ### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
 
-Un tip care reprezintă supraîncărcările argumentelor constructorului.
+Supraîncărcările argumentelor constructorului.
 
 ```ts
 type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
@@ -134,7 +132,7 @@ type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
     : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
 ```
 
-Forma fără `meta` este permisă numai atunci când `TMeta` este `undefined`.
+Omiteți `meta` doar când `TMeta` este `undefined`.
 
 ### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
 
@@ -144,10 +142,9 @@ interface I18nErrorBaseConstructor {
 }
 ```
 
-Tipul primului argument al `setErrorMessage`. Un simbol intern de identificare împiedică la nivel de tip strecurarea claselor care nu extind `I18nErrorBase`.
+Tipul primului argument al `setErrorMessage`.
 
 ## Note [#notes]
 
-- `lang` implicit folosit pentru rezolvarea `message` este `"en"`. Comutați-l explicit cu `setGlobalConfig({ lang })`
-- Nu există normalizare a codurilor de limbă și nici lanț de fallback (de ex. revenirea de la `en-US` la `en`). Limbile neînregistrate produc întotdeauna mesajul implicit
-- Datele de înregistrare sunt păstrate într-un `WeakMap` la nivelul întregului proces. Pentru a izola testele, eliminați-le cu `globalThis.i18n_error_base__message_map = undefined`
+- `lang` implicit este `"en"`. Comutați cu `setGlobalConfig({ lang })`
+- Fără normalizarea codurilor de limbă și fără lanț de fallback (de ex. `en-US` → `en`). Limbile neînregistrate folosesc mesajul implicit

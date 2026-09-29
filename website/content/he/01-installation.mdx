@@ -8,7 +8,7 @@ description: אופן ההתקנה של i18n-error-base ודרישות ההפע�
 - סביבת הרצה המסוגלת לטפל במודולי ES, כגון Node.js
 - נדרשת תלות peer של `valibot@^1.0.0`
 
-`I18nErrorBase` מתייחס פנימית ל-`getGlobalConfig()` של Valibot כדי לקבל את `lang` העדכני. גם בפרויקט שאינו משתמש ב-Valibot, ניתן להפעיל זאת פשוט על ידי קריאה ל-`setGlobalConfig({ lang })` לצורך החלפת שפה.
+`message` עוקב אחר `lang` מתוך `getGlobalConfig()` של Valibot.
 
 ## התקנה [#installation]
 
@@ -23,7 +23,7 @@ npm i valibot
 ```
 
 :::warning[שימו לב לתלות ה-peer]
-`i18n-error-base` אינו מאגד בתוכו את `valibot`. אם הצד המארח אינו מספק את `valibot@^1.0.0`, תתקבל שגיאת resolution בעת הייבוא.
+`valibot` אינו מבונדל. ללא `valibot@^1.0.0` הייבוא נכשל.
 :::
 
 ## ייבוא [#import]
@@ -33,17 +33,6 @@ import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
 import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
 ```
 
-קיים גם ייצוא ברירת מחדל.
-
-```ts
-import I18nErrorBase from "i18n-error-base";
-import setErrorMessage from "i18n-error-base";
-```
-
-:::note
-החבילה מופצת כ-ESM (`"type": "module"`) ללא תופעות לוואי (`"sideEffects": false`). הגדרות הטיפוסים נפתרות מתוך `dist/src/*.d.ts`.
-:::
-
 ## הצעדים הבאים [#next-steps]
 
-בדקו ב[שימוש](/he/usage) את היסודות של הגדרת מחלקת שגיאה והחלפת שפה.
+ראו [שימוש](/he/usage) ליסודות ההגדרה וההחלפה.

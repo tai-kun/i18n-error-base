@@ -5,7 +5,7 @@ description: De specificatie van I18nErrorBase, setErrorMessage en de bijbehoren
 
 ## `I18nErrorBase` [#i18n-error-base]
 
-De basisklasse om `Error` te overerven. Herdefinieert `message` als een getter en lost deze dynamisch op afhankelijk van Valibot's `lang`.
+De basisklasse om `Error` te overerven. `message` wordt opgelost volgens `lang`.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -17,21 +17,21 @@ class MyError extends I18nErrorBase<{ code: string }> {}
 
 | Prop | Type | Default | Beschrijving |
 | ---- | ---- | ------- | ------------ |
-| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Het type van de aanvullende informatie die als `meta` wordt bewaard. Geef `undefined` op als je deze niet gebruikt. |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Het type van `meta`. Geef `undefined` op als je deze niet gebruikt. |
 
 ### Statische properties [#static-props]
 
 | Prop | Type | Default | Beschrijving |
 | ---- | ---- | ------- | ------------ |
-| `prefix?` | `string` | `undefined` | Wanneer ingesteld, wordt deze vooraan het opgeloste bericht samengevoegd. |
+| `prefix?` | `string` | `undefined` | Wordt vooraan het opgeloste bericht geplaatst. |
 
 ### Instantieproperties [#instance-props]
 
 | Prop | Type | Beschrijving |
 | ---- | ---- | ------------ |
-| `meta` | `TMeta` | De aanvullende informatie die in de constructor is doorgegeven. Leesbaar en schrijfbaar. |
-| `message` | `string` | Het bericht dat afhankelijk van de huidige `lang` wordt opgelost. Enumerable. |
-| `cause` | `unknown` | De oorzaak die via `ErrorOptions` is doorgegeven. Een standaardproperty van `Error`. |
+| `meta` | `TMeta` | Aanvullende info uit de constructor. Leesbaar en schrijfbaar. |
+| `message` | `string` | Wordt opgelost volgens `lang`. Enumerable. |
+| `cause` | `unknown` | De oorzaak uit `ErrorOptions`. Een standaardproperty van `Error`. |
 
 ### Constructor [#constructor]
 
@@ -50,26 +50,24 @@ new MyError(meta, message, options?)
 
 | Parameter | Type | Beschrijving |
 | --------- | ---- | ------------ |
-| `meta` | `TMeta` | Aanvullende informatie voor het genereren van berichten. |
-| `message` | `string \| MessageFactory<TMeta>` | Het standaardbericht voor talen zonder registratie. Als het een functie is, ontvangt deze `meta`. |
-| `options` | `ErrorOptions` | Opties die compatibel zijn met het tweede argument van `Error` (zoals `{ cause }`). |
-
-Als aan `message` iets anders dan een tekenreeks (bijv. een getal) wordt doorgegeven, wordt het met `String(...)` naar een tekenreeks omgezet. Als een berichtfabriek een lege tekenreeks teruggeeft, is `message` ook een lege tekenreeks.
+| `meta` | `TMeta` | Aanvullende info voor het genereren van berichten. |
+| `message` | `string \| MessageFactory<TMeta>` | Het standaardbericht voor talen zonder registratie. Functies ontvangen `meta`. |
+| `options` | `ErrorOptions` | Opties compatibel met het tweede argument van `Error` (zoals `{ cause }`). |
 
 ### Oplossingsvolgorde [#resolution-order]
 
-1. Haalt `lang` op uit `getGlobalConfig()` (standaard `"en"` indien niet ingesteld)
-2. Voert de functie voor die klasse en taal, geregistreerd met `setErrorMessage`, uit met `meta`
-3. Indien niet geregistreerd, wordt het standaardbericht uit de constructor gebruikt (een tekenreeks of het evaluatieresultaat van een functie; na de eerste evaluatie gecachet)
-4. Indien `static prefix` bestaat, wordt deze vooraan samengevoegd
+1. Haalt `lang` op uit `getGlobalConfig()` (`"en"` indien niet ingesteld)
+2. Voert de geregistreerde functie voor die klasse en taal uit met `meta`
+3. Indien niet geregistreerd, wordt het standaardbericht gebruikt
+4. Indien `static prefix` is ingesteld, wordt deze vooraan geplaatst
 
 :::note
-De registratiematch is een exacte overeenkomst met `this.constructor`. Registraties op een bovenliggende klasse worden niet overgeërfd door subklassen. Registreer voor elke benodigde klasse afzonderlijk.
+Registraties zijn per klasse. Registraties op een bovenliggende klasse worden niet overgeërfd. Registreer elke klasse afzonderlijk.
 :::
 
 ## `setErrorMessage` [#set-error-message]
 
-Registreert een berichtgenererende functie per taal.
+Registreert berichtgenererende functies per taal.
 
 ```ts
 import { setErrorMessage } from "i18n-error-base";
@@ -79,11 +77,11 @@ setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
 
 | Parameter | Type | Beschrijving |
 | --------- | ---- | ------------ |
-| `reference` | `I18nErrorBaseConstructor` | Een klasse die `I18nErrorBase` overerft. Klassen zonder deze overerving veroorzaken een typefout. |
-| `message` | `string \| (meta) => string` | Het te registreren bericht. Het type van `meta` wordt afgeleid uit de `meta` van de doelklasse. |
-| `lang` | `string \| Iterable<string>` | De doeltaal. Eén enkele code of een itereerbaar object met codes (zoals een array). |
+| `reference` | `I18nErrorBaseConstructor` | Een klasse die `I18nErrorBase` overerft. Klassen zonder overerving geven een typefout. |
+| `message` | `string \| (meta) => string` | Het te registreren bericht. Het type van `meta` wordt afgeleid van de doelklasse. |
+| `lang` | `string \| Iterable<string>` | De doeltaal. Eén code of een itereerbaar object (zoals een array). |
 
-Tekenreeksen worden intern omgezet naar functies en bewaard. Opnieuw registreren voor dezelfde klasse en taal overschrijft. De opslag is een `WeakMap` in `globalThis.i18n_error_base__message_map`, met als sleutel de klasse en als waarde een `Map` van taal naar functie.
+Opnieuw registreren voor dezelfde klasse en taal overschrijft.
 
 ## Typen [#types]
 
@@ -95,7 +93,7 @@ type ErrorMeta = {
 };
 ```
 
-De standaardbeperking voor `TMeta`. Vertegenwoordigt een alleen-lezen object met willekeurige properties.
+De standaardbeperking voor `TMeta`. Een alleen-lezen object met willekeurige properties.
 
 ### `ErrorOptions` [#error-options]
 
@@ -109,7 +107,7 @@ type ErrorOptions =
     : { readonly cause?: unknown };
 ```
 
-Een type afgeleid van het tweede argument van de `Error`-constructor van de runtime. Je kunt er opties met `cause` in doorgeven. De tweede tak is een fallback voor oudere omgevingen.
+Een type afgeleid van het tweede argument van `Error`. Je kunt er `cause` in doorgeven.
 
 ### `MessageFactory<TMeta>` [#message-factory]
 
@@ -119,11 +117,11 @@ interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 }
 ```
 
-Een functie die uit `meta` een bericht genereert. Kan zowel voor het standaardbericht van de constructor als voor de geregistreerde waarde van `setErrorMessage` worden gebruikt.
+Een functie die uit `meta` een bericht genereert. Voor zowel standaard- als geregistreerde berichten.
 
 ### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
 
-Een type dat de overloads van constructorargumenten vertegenwoordigt.
+Overloads van constructorargumenten.
 
 ```ts
 type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
@@ -134,7 +132,7 @@ type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
     : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
 ```
 
-Alleen wanneer `TMeta` `undefined` is, is de verkorte vorm zonder `meta` toegestaan.
+Alleen als `TMeta` `undefined` is, mag je `meta` weglaten.
 
 ### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
 
@@ -144,10 +142,9 @@ interface I18nErrorBaseConstructor {
 }
 ```
 
-Het type van het eerste argument van `setErrorMessage`. Via een intern symbool voor identificatie wordt op typeniveau voorkomen dat klassen die `I18nErrorBase` niet overerven worden binnengesmokkeld.
+Het type van het eerste argument van `setErrorMessage`.
 
 ## Aanvullingen [#notes]
 
-- De standaardwaarde van `lang` voor het oplossen van `message` is `"en"`. Schakel expliciet met `setGlobalConfig({ lang })`
-- Er is geen normalisatie van taalcodes of fallbackketen (bijv. uitwijken van `en-US` naar `en`). Niet-geregistreerde talen krijgen uniform het standaardbericht
-- Registratiegegevens worden bewaard in een `WeakMap` voor het hele proces. Als je ze in tests wilt isoleren, kun je ze met `globalThis.i18n_error_base__message_map = undefined` weggooien
+- De standaardwaarde van `lang` is `"en"`. Schakel expliciet met `setGlobalConfig({ lang })`
+- Geen normalisatie van taalcodes of fallbackketen (bijv. `en-US` naar `en`). Niet-geregistreerde talen krijgen het standaardbericht

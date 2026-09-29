@@ -5,7 +5,7 @@ description: I18nErrorBase, setErrorMessage, সংশ্লিষ্ট টা�
 
 ## `I18nErrorBase` [#i18n-error-base]
 
-`Error` থেকে উত্তরাধিকারের জন্য বেস ক্লাস। `message`-কে গেটার হিসেবে পুনঃসংজ্ঞায়িত করে, Valibot-এর `lang` অনুযায়ী গতিশীলভাবে রিজলভ করে।
+`Error` থেকে উত্তরাধিকারের বেস ক্লাস। `message` `lang` অনুযায়ী রিজলভ হয়।
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -17,20 +17,20 @@ class MyError extends I18nErrorBase<{ code: string }> {}
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | `meta` হিসেবে সংরক্ষিত আনুষঙ্গিক তথ্যের টাইপ। ব্যবহার না করলে `undefined` নির্দিষ্ট করুন। |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | `meta`-এর টাইপ। ব্যবহার না করলে `undefined` নির্দিষ্ট করুন। |
 
 ### স্ট্যাটিক প্রপার্টি [#static-props]
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `prefix?` | `string` | `undefined` | সেট করলে রিজলভ হওয়া বার্তার শুরুতে যুক্ত হয়। |
+| `prefix?` | `string` | `undefined` | রিজলভ হওয়া বার্তার শুরুতে যুক্ত হয়। |
 
 ### ইনস্ট্যান্স প্রপার্টি [#instance-props]
 
 | Prop | Type | Description |
 | ---- | ---- | ----------- |
-| `meta` | `TMeta` | কনস্ট্রাক্টরে দেওয়া আনুষঙ্গিক তথ্য। পড়া-লেখা সম্ভব। |
-| `message` | `string` | বর্তমান `lang` অনুযায়ী রিজলভ হওয়া বার্তা। এনিউমারেবল। |
+| `meta` | `TMeta` | কনস্ট্রাক্টরের আনুষঙ্গিক তথ্য। পড়া-লেখা সম্ভব। |
+| `message` | `string` | বর্তমান `lang` অনুযায়ী রিজলভ হয়। এনিউমারেবল। |
 | `cause` | `unknown` | `ErrorOptions` দিয়ে দেওয়া কারণ। `Error`-এর মানক প্রপার্টি। |
 
 ### কনস্ট্রাক্টর [#constructor]
@@ -51,20 +51,18 @@ new MyError(meta, message, options?)
 | প্যারামিটার | ধরন | বর্ণনা |
 | ------------ | -- | ---- |
 | `meta` | `TMeta` | বার্তা তৈরিতে ব্যবহৃত আনুষঙ্গিক তথ্য। |
-| `message` | `string \| MessageFactory<TMeta>` | নিবন্ধন নেই এমন ভাষায় ব্যবহৃত ডিফল্ট বার্তা। ফাংশন হলে `meta` গ্রহণ করে। |
+| `message` | `string \| MessageFactory<TMeta>` | অনিবন্ধিত ভাষায় ডিফল্ট বার্তা। ফাংশন হলে `meta` নেয়। |
 | `options` | `ErrorOptions` | `Error`-এর ২য় আর্গুমেন্টের সাথে সামঞ্জস্যপূর্ণ অপশন (`{ cause }` ইত্যাদি)। |
-
-`message`-এ স্ট্রিং ছাড়া মান (সংখ্যা ইত্যাদি) দিলে `String(...)` দিয়ে স্ট্রিং করা হয়। মেসেজ ফ্যাক্টরি খালি স্ট্রিং ফেরত দিলে `message`-ও খালি স্ট্রিং হয়।
 
 ### রিজলিউশন ক্রম [#resolution-order]
 
 1. `getGlobalConfig()`-এর `lang` নেয় (সেট না থাকলে `"en"`)
-2. `setErrorMessage` দিয়ে নিবন্ধিত সংশ্লিষ্ট ক্লাস・সংশ্লিষ্ট ভাষার ফাংশন `meta` সহ চালায়
-3. অনিবন্ধিত হলে কনস্ট্রাক্টরের ডিফল্ট বার্তা (স্ট্রিং বা ফাংশনের মূল্যায়ন ফলাফল। প্রথম মূল্যায়নের পর ক্যাশ) ব্যবহার করে
+2. সেই ক্লাস ও ভাষার নিবন্ধিত ফাংশন `meta` সহ চালায়
+3. অনিবন্ধিত হলে ডিফল্ট বার্তা ব্যবহার করে
 4. `static prefix` থাকলে শুরুতে যুক্ত করে
 
 :::note
-নিবন্ধনের মিল `this.constructor`-এর পূর্ণ সমতা। প্যারেন্ট ক্লাসে নিবন্ধন চাইল্ড ক্লাসে উত্তরাধিকারসূত্রে যায় না। প্রয়োজনীয় প্রতিটি ক্লাসে নিবন্ধন করুন।
+নিবন্ধন ক্লাস-প্রতি। প্যারেন্টের নিবন্ধন উত্তরাধিকারসূত্রে যায় না। প্রতিটি ক্লাসে নিবন্ধন করুন।
 :::
 
 ## `setErrorMessage` [#set-error-message]
@@ -79,11 +77,11 @@ setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
 
 | প্যারামিটার | ধরন | বর্ণনা |
 | ------------ | -- | ---- |
-| `reference` | `I18nErrorBaseConstructor` | `I18nErrorBase` থেকে উত্তরাধিকারী ক্লাস। উত্তরাধিকারী নয় এমন ক্লাস টাইপ ত্রুটি হয়। |
-| `message` | `string \| (meta) => string` | নিবন্ধন করার বার্তা। `meta`-এর টাইপ লক্ষ্য ক্লাসের `meta` থেকে অনুমান করা হয়। |
-| `lang` | `string \| Iterable<string>` | লক্ষ্য ভাষা। একক কোড বা কোডের ইটারেবল অবজেক্ট (অ্যারে ইত্যাদি)। |
+| `reference` | `I18nErrorBaseConstructor` | `I18nErrorBase` থেকে উত্তরাধিকারী ক্লাস। অন্যথায় টাইপ ত্রুটি। |
+| `message` | `string \| (meta) => string` | নিবন্ধনের বার্তা। `meta`-এর টাইপ লক্ষ্য ক্লাস থেকে অনুমান হয়। |
+| `lang` | `string \| Iterable<string>` | লক্ষ্য ভাষা। একক কোড বা ইটারেবল অবজেক্ট (অ্যারে ইত্যাদি)। |
 
-স্ট্রিং অভ্যন্তরীণভাবে ফাংশনে রূপান্তর করে সংরক্ষণ করা হয়। একই ক্লাস・একই ভাষায় পুনর্নিবন্ধন ওভাররাইট। সংরক্ষণস্থল `globalThis.i18n_error_base__message_map`-এর `WeakMap`, কী ক্লাস, মান ভাষা থেকে ফাংশনে `Map`।
+একই ক্লাস・একই ভাষায় পুনর্নিবন্ধন ওভাররাইট।
 
 ## ধরন [#types]
 
@@ -95,7 +93,7 @@ type ErrorMeta = {
 };
 ```
 
-`TMeta`-এর ডিফল্ট সীমাবদ্ধতা। যেকোনো প্রপার্টিযুক্ত রিড-অনলি অবজেক্ট বোঝায়।
+`TMeta`-এর ডিফল্ট সীমাবদ্ধতা। যেকোনো প্রপার্টিযুক্ত রিড-অনলি অবজেক্ট।
 
 ### `ErrorOptions` [#error-options]
 
@@ -109,7 +107,7 @@ type ErrorOptions =
     : { readonly cause?: unknown };
 ```
 
-রানটাইমের `Error` কনস্ট্রাক্টর ২য় আর্গুমেন্ট থেকে উদ্ভূত টাইপ। `cause` সহ অপশন দেওয়া যায়। পরের শাখা পুরোনো পরিবেশের জন্য ফলব্যাক।
+`Error`-এর ২য় আর্গুমেন্ট থেকে উদ্ভূত টাইপ। `cause` দেওয়া যায়।
 
 ### `MessageFactory<TMeta>` [#message-factory]
 
@@ -119,11 +117,11 @@ interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 }
 ```
 
-`meta` থেকে বার্তা তৈরির ফাংশন। কনস্ট্রাক্টরের ডিফল্ট বার্তা ও `setErrorMessage`-এর নিবন্ধন মান উভয়েই ব্যবহারযোগ্য।
+`meta` থেকে বার্তা তৈরির ফাংশন। ডিফল্ট ও নিবন্ধন উভয়ে ব্যবহৃত।
 
 ### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
 
-কনস্ট্রাক্টর আর্গুমেন্টের ওভারলোড বোঝানো টাইপ।
+কনস্ট্রাক্টর আর্গুমেন্টের ওভারলোড।
 
 ```ts
 type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
@@ -134,7 +132,7 @@ type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
     : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
 ```
 
-`TMeta` `undefined` হলেই শুধু `meta`-বিহীন রূপ অনুমোদিত।
+শুধু `TMeta` `undefined` হলেই `meta`-বিহীন রূপ অনুমোদিত।
 
 ### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
 
@@ -144,10 +142,9 @@ interface I18nErrorBaseConstructor {
 }
 ```
 
-`setErrorMessage`-এর ১ম আর্গুমেন্টের টাইপ। অভ্যন্তরীণ শনাক্তকারী সিম্বল দিয়ে, `I18nErrorBase` থেকে উত্তরাধিকারী নয় এমন ক্লাসের মিশ্রণ টাইপ-স্তরে রোধ করে।
+`setErrorMessage`-এর ১ম আর্গুমেন্টের টাইপ।
 
 ## পরিপূরক [#notes]
 
-- `message` রিজলভে ব্যবহৃত `lang`-এর ডিফল্ট মান `"en"`। `setGlobalConfig({ lang })` দিয়ে স্পষ্টভাবে বদলান
-- ভাষা কোড স্বাভাবিককরণ বা ফলব্যাক চেইন নেই (যেমন: `en-US` থেকে `en`-এ অব্যাহতি)। অনিবন্ধিত ভাষা একভাবে ডিফল্ট বার্তা হয়
-- নিবন্ধন ডেটা প্রক্রিয়া-ব্যাপী `WeakMap`-এ সংরক্ষিত। পরীক্ষায় আলাদা করতে চাইলে `globalThis.i18n_error_base__message_map = undefined` দিয়ে ধ্বংস করা যায়
+- `lang`-এর ডিফল্ট মান `"en"`। `setGlobalConfig({ lang })` দিয়ে স্পষ্টভাবে বদলান
+- ভাষা কোড স্বাভাবিককরণ বা ফলব্যাক চেইন নেই (যেমন `en-US` → `en`)। অনিবন্ধিত ভাষা ডিফল্ট বার্তা হয়

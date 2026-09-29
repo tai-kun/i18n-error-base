@@ -3,7 +3,7 @@ title: i18n-error-base
 description: Classe base d'Error que canvia els missatges d'error segons la configuració d'idioma de Valibot.
 ---
 
-És una classe base per heretar `Error` que canvia `message` dinàmicament segons la configuració global d'idioma (`lang`) de Valibot.
+Classe base `Error` que canvia `message` amb `lang` de Valibot.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -23,45 +23,44 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Resource not found: user
 ```
 
-Com que `lang` es consulta cada vegada que s'accedeix a `message`, es pot canviar d'idioma sense tornar a crear les instàncies. Per als idiomes sense registre, es recorre al missatge per defecte passat al constructor.
+`message` consulta `lang` a cada lectura. Canvieu sense tornar a crear les instàncies. Els idiomes sense registre utilitzen el missatge per defecte del constructor.
 
 ## Característiques [#features]
 
-- Resol `message` dinàmicament enllaçant amb `getGlobalConfig()` / `setGlobalConfig({ lang })` de Valibot
-- Els missatges per idioma es registren posteriorment amb `setErrorMessage`. També s'hi poden registrar funcions que reben `meta`
-- Per als idiomes sense registre, es recorre al missatge per defecte del constructor
-- Es pot afegir un prefix al començament del missatge amb `static prefix` per classe
-- Conserva `meta` al constructor i la passa a les funcions de generació de missatges
-- Com que hereta `Error`, `instanceof Error`, `cause` i `stack` es poden utilitzar tal qual
-- Com que els missatges es desen en un `WeakMap`, les classes que ja no calen es recullen com a brossa
+- Resol `message` dinàmicament amb `setGlobalConfig({ lang })` de Valibot
+- Els missatges per idioma es registren posteriorment amb `setErrorMessage`. També s'accepten funcions que reben `meta`
+- Els idiomes sense registre utilitzen el missatge per defecte del constructor
+- Afegeix un prefix amb `static prefix` per classe
+- Conserva `meta` i la passa a les funcions de generació de missatges
+- `instanceof Error`, `cause` i `stack` funcionen com sempre
 
 ## Estructura [#structure]
 
 <CardGroup cols={2}>
   <Card title="Instal·lació" href="/ca/installation" icon="download">
-    L'addició del paquet i la dependència d'iguals amb Valibot.
+    L'addició del paquet i la seva dependència d'iguals.
   </Card>
   <Card title="Ús" href="/ca/usage" icon="book-open">
-    Operacions bàsiques des de la definició de classes fins al canvi d'idioma, el prefix i la reserva.
+    De la definició al canvi d'idioma, el prefix i la reserva.
   </Card>
   <Card title="Referència de l'API" href="/ca/api" icon="code">
-    L'especificació de `I18nErrorBase` i `setErrorMessage`, i dels tipus relacionats.
+    L'especificació de `I18nErrorBase` i `setErrorMessage`.
   </Card>
 </CardGroup>
 
 ## Com funciona [#how-it-works]
 
-El constructor de `I18nErrorBase` defineix `message` com a getter. Es resol en l'ordre següent a cada accés.
+`message` es resol en l'ordre següent a cada accés.
 
-1. Obté `lang` de `getGlobalConfig()`. Si no està configurat, és `"en"`
-2. Si hi ha una funció `(classe × lang)` registrada amb `setErrorMessage`, l'executa passant-hi `meta`
-3. En cas contrari, retorna el missatge per defecte passat al constructor (una cadena o el resultat d'una funció)
+1. Obté `lang` de `getGlobalConfig()`. `"en"` si no està configurat
+2. Si hi ha un registre `(classe × lang)`, l'executa amb `meta`
+3. En cas contrari, retorna el missatge per defecte del constructor
 4. Si `static prefix` està configurat, el concatena al principi
 
 :::tip
-La forma funcional del missatge per defecte s'avalua en el primer accés i després es desa a la memòria cau. Els missatges dels idiomes registrats es regeneren des de `meta` a cada accés, de manera que el canvi d'idioma es reflecteix immediatament.
+Els missatges registrats es generen des de `meta` a cada lectura, de manera que el canvi d'idioma es reflecteix immediatament.
 :::
 
 ## Següents passos [#next-steps]
 
-Comenceu per la [Instal·lació](/ca/installation) i comproveu el flux complet a [Ús](/ca/usage). Els detalls de tipus i arguments es recullen a la [Referència de l'API](/ca/api).
+Comenceu per la [Instal·lació](/ca/installation) i vegeu el flux a [Ús](/ca/usage). Els detalls són a la [Referència de l'API](/ca/api).

@@ -3,7 +3,7 @@ title: i18n-error-base
 description: En Error-basklass som växlar felmeddelanden i takt med Valibots språkinställning.
 ---
 
-En basklass för att ärva `Error` som dynamiskt växlar `message` i takt med Valibots globala språkinställning (`lang`).
+En `Error`-basklass som växlar `message` med Valibots `lang`.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -23,45 +23,44 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Resource not found: user
 ```
 
-Eftersom aktuell `lang` slås upp varje gång `message` nås kan du byta språk utan att återskapa instanser. För språk utan registrering faller den tillbaka på standardmeddelandet som skickades till konstruktorn.
+`message` refererar till `lang` vid varje läsning. Byt utan att återskapa instanser. Oregistrerade språk använder konstruktorns standardmeddelande.
 
 ## Funktioner [#features]
 
-- Löser `message` dynamiskt i takt med Valibots `getGlobalConfig()` / `setGlobalConfig({ lang })`
-- Registrera språkspecifika meddelanden i efterhand med `setErrorMessage`. Du kan också registrera funktioner som tar emot `meta`
-- Faller tillbaka på konstruktorns standardmeddelande för språk utan registrering
-- Kan lägga till ett prefix i början av meddelandet via klassens `static prefix`
-- Behåller `meta` från konstruktorn och skickar den till meddelandefunktioner
-- Ärver från `Error`, så `instanceof Error`, `cause` och `stack` fungerar som vanligt
-- Lagrar meddelanden i en `WeakMap`, så oanvända klasser kan skräpsamlas
+- Löser `message` dynamiskt med Valibots `setGlobalConfig({ lang })`
+- Registrera språkspecifika meddelanden i efterhand med `setErrorMessage`. Funktioner som tar emot `meta` är också tillåtna
+- Oregistrerade språk använder konstruktorns standardmeddelande
+- Lägger till ett prefix via `static prefix` per klass
+- Behåller `meta` och skickar den till meddelandefunktioner
+- `instanceof Error`, `cause` och `stack` fungerar som vanligt
 
 ## Struktur [#structure]
 
 <CardGroup cols={2}>
   <Card title="Installation" href="/sv/installation" icon="download">
-    Om att lägga till paketet och peer-beroendet på Valibot.
+    Hur man lägger till paketet och dess peer-beroende.
   </Card>
   <Card title="Användning" href="/sv/usage" icon="book-open">
-    Grundläggande hantering från klassdefinition till språkbyte, prefix och fallback.
+    Från definition till språkbyte, prefix och fallback.
   </Card>
   <Card title="API-referens" href="/sv/api" icon="code">
-    Specifikationer för `I18nErrorBase` och `setErrorMessage` samt relaterade typer.
+    Specifikationer för `I18nErrorBase` och `setErrorMessage`.
   </Card>
 </CardGroup>
 
 ## Så fungerar det [#how-it-works]
 
-`I18nErrorBase`:s konstruktor definierar `message` som en getter. Den löses i följande ordning vid varje åtkomst.
+`message` löses i följande ordning vid varje åtkomst.
 
-1. Hämtar `lang` från `getGlobalConfig()`. Den är `"en"` när den inte är inställd
-2. Om en `(klass × lang)`-funktion registrerad med `setErrorMessage` finns körs den med `meta`
-3. Annars returneras standardmeddelandet från konstruktorn (en sträng eller resultatet av en funktion)
+1. Hämtar `lang` från `getGlobalConfig()`. `"en"` när den inte är inställd
+2. Om en `(klass × lang)`-registrering finns körs den med `meta`
+3. Annars returneras konstruktorns standardmeddelande
 4. Om `static prefix` är inställt läggs det till i början
 
 :::tip
-Standardmeddelandets funktionsform utvärderas vid första åtkomsten och cachas därefter. Meddelanden för registrerade språk återskapas från `meta` vid varje åtkomst, så språkbyten slår igenom omedelbart.
+Registrerade meddelanden genereras från `meta` vid varje läsning, så språkbyten slår igenom omedelbart.
 :::
 
 ## Nästa steg [#next-steps]
 
-Börja med [Installation](/sv/installation) och gå sedan igenom hela flödet i [Användning](/sv/usage). Typer och argument beskrivs i [API-referensen](/sv/api).
+Börja med [Installation](/sv/installation) och se sedan flödet i [Användning](/sv/usage). Detaljer finns i [API-referensen](/sv/api).

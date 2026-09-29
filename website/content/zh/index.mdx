@@ -3,7 +3,7 @@ title: i18n-error-base
 description: 与 Valibot 语言设置联动切换错误消息的 Error 基类。
 ---
 
-与 Valibot 全局语言设置（`lang`）联动、动态切换 `message` 的 `Error` 继承用基类。
+与 Valibot 的 `lang` 联动切换 `message` 的 `Error` 基类。
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -23,45 +23,44 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Resource not found: user
 ```
 
-由于每次访问 `message` 时都会参照当时的 `lang`，因此无需重新创建实例即可切换语言。对于未注册的语言，将回退到传给构造函数的默认消息。
+`message` 在每次读取时参照 `lang`。无需重新创建实例即可切换。未注册的语言使用构造函数的默认消息。
 
 ## 特性 [#features]
 
-- 与 Valibot 的 `getGlobalConfig()` / `setGlobalConfig({ lang })` 联动，动态解析 `message`
-- 使用 `setErrorMessage` 在之后注册各语言的消息，也可以注册接收 `meta` 的函数
-- 对于未注册的语言，回退到构造函数的默认消息
-- 可通过类级别的 `static prefix` 在消息开头添加前缀
-- 在构造函数中保留 `meta`，并将其传递给消息生成函数
-- 由于继承自 `Error`，`instanceof Error`、`cause`、`stack` 可照常使用
-- 消息保存位置为 `WeakMap`，不再需要的类会被垃圾回收
+- 与 Valibot 的 `setGlobalConfig({ lang })` 联动，动态解析 `message`
+- 使用 `setErrorMessage` 在之后注册各语言的消息，也可使用接收 `meta` 的函数
+- 未注册的语言使用构造函数的默认消息
+- 通过按类的 `static prefix` 添加前缀
+- 保留 `meta` 并传递给消息生成函数
+- `instanceof Error`、`cause`、`stack` 照常使用
 
 ## 结构 [#structure]
 
 <CardGroup cols={2}>
   <Card title="安装" href="/zh/installation" icon="download">
-    关于添加包以及与 Valibot 对等依赖的说明。
+    添加包与对等依赖的方法。
   </Card>
   <Card title="使用方法" href="/zh/usage" icon="book-open">
-    从定义类到语言切换、前缀、回退的基本操作。
+    从定义到切换、前缀、回退。
   </Card>
   <Card title="API 参考" href="/zh/api" icon="code">
-    `I18nErrorBase` 与 `setErrorMessage` 及相关类型的规范。
+    `I18nErrorBase` 与 `setErrorMessage` 的规范。
   </Card>
 </CardGroup>
 
 ## 工作原理 [#how-it-works]
 
-`I18nErrorBase` 的构造函数将 `message` 定义为 getter，每次访问时按以下顺序解析。
+`message` 在每次读取时按以下顺序解析。
 
 1. 从 `getGlobalConfig()` 获取 `lang`，未设置时为 `"en"`
-2. 如果存在经 `setErrorMessage` 注册的（类 × lang）函数，则传入 `meta` 并执行
-3. 否则返回传给构造函数的字符串或函数结果（默认消息）
-4. 如果设置了 `static prefix`，则拼接到开头
+2. 如有（类 × lang）注册，则传入 `meta` 并执行
+3. 否则返回构造函数的默认消息
+4. 如设置了 `static prefix`，则拼接到开头
 
 :::tip
-默认消息的函数形式会在首次访问时求值，此后会被缓存。已注册语言的消息会在每次访问时根据 `meta` 重新生成，因此语言切换会立即生效。
+已注册消息在每次读取时根据 `meta` 生成，因此切换会立即生效。
 :::
 
 ## 下一步 [#next-steps]
 
-请从[安装](/zh/installation)开始，在[使用方法](/zh/usage)中确认完整流程。类型与参数详情汇总于 [API 参考](/zh/api)。
+从[安装](/zh/installation)开始，在[使用方法](/zh/usage)中确认流程。详情参见 [API 参考](/zh/api)。

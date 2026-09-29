@@ -5,7 +5,7 @@ description: Specifikace I18nErrorBase, setErrorMessage a souvisejících typů.
 
 ## `I18nErrorBase` [#i18n-error-base]
 
-Základní třída pro dědění z `Error`. Znovu definuje `message` jako getter a dynamicky jej resolvuje podle `lang` Valibotu.
+Základní třída pro dědění z `Error`. `message` se resolvuje podle `lang`.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -17,21 +17,21 @@ class MyError extends I18nErrorBase<{ code: string }> {}
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Typ doprovodných informací uchovávaných jako `meta`. Pokud se nepoužívají, zadejte `undefined`. |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | Typ `meta`. Když se nepoužívá, zadejte `undefined`. |
 
 ### Statické vlastnosti [#static-props]
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `prefix?` | `string` | `undefined` | Je-li nastaven, připojí se na začátek vyhodnocené zprávy. |
+| `prefix?` | `string` | `undefined` | Připojí se na začátek vyhodnocené zprávy. |
 
 ### Vlastnosti instance [#instance-props]
 
 | Prop | Type | Description |
 | ---- | ---- | ----------- |
-| `meta` | `TMeta` | Doprovodné informace předané konstruktoru. Lze číst i zapisovat. |
-| `message` | `string` | Zpráva vyhodnocená podle aktuálního `lang`. Je enumerovatelná. |
-| `cause` | `unknown` | Příčina předaná přes `ErrorOptions`. Standardní vlastnost `Error`. |
+| `meta` | `TMeta` | Pomocné údaje konstruktoru. Lze číst i zapisovat. |
+| `message` | `string` | Vyhodnocuje se podle `lang`. Je enumerovatelná. |
+| `cause` | `unknown` | Příčina z `ErrorOptions`. Standardní vlastnost `Error`. |
 
 ### Konstruktor [#constructor]
 
@@ -50,26 +50,24 @@ new MyError(meta, message, options?)
 
 | Parametr | Typ | Popis |
 | -------- | --- | ----- |
-| `meta` | `TMeta` | Doprovodné informace používané ke generování zprávy. |
-| `message` | `string \| MessageFactory<TMeta>` | Výchozí zpráva pro jazyky bez registrace. Je-li funkcí, přijímá `meta`. |
+| `meta` | `TMeta` | Pomocné údaje pro generování zprávy. |
+| `message` | `string \| MessageFactory<TMeta>` | Výchozí zpráva pro jazyky bez registrace. Funkce přijímají `meta`. |
 | `options` | `ErrorOptions` | Volby kompatibilní s druhým argumentem `Error` (např. `{ cause }`). |
-
-Pokud se do `message` předá jiná než řetězcová hodnota (např. číslo), převede se pomocí `String(...)` na řetězec. Vrátí-li továrna zpráv prázdný řetězec, bude i `message` prázdným řetězcem.
 
 ### Pořadí vyhodnocení [#resolution-order]
 
-1. Získá `lang` z `getGlobalConfig()` (není-li nastaveno, `"en"`)
-2. Spustí funkci pro danou třídu a jazyk registrovanou pomocí `setErrorMessage` s `meta`
-3. Není-li registrována, použije výchozí zprávu z konstruktoru (řetězec nebo výsledek vyhodnocení funkce; po prvním vyhodnocení se ukládá do mezipaměti)
+1. Získá `lang` z `getGlobalConfig()` (`"en"`, není-li nastaveno)
+2. Spustí registrovanou funkci pro danou třídu a jazyk s `meta`
+3. Není-li registrována, použije výchozí zprávu
 4. Je-li `static prefix`, připojí jej na začátek
 
 :::note
-Shoda registrace je striktní rovnost `this.constructor`. Registrace pro rodičovskou třídu se na potomky nedědí. Registrujte pro každou potřebnou třídu zvlášť.
+Registrace jsou vázány na třídu. Registrace rodiče se nedědí. Registrujte každou třídu.
 :::
 
 ## `setErrorMessage` [#set-error-message]
 
-Registruje funkci pro tvorbu zprávy pro jednotlivé jazyky.
+Registruje funkce pro tvorbu zprávy pro jednotlivé jazyky.
 
 ```ts
 import { setErrorMessage } from "i18n-error-base";
@@ -79,11 +77,11 @@ setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
 
 | Parametr | Typ | Popis |
 | -------- | --- | ----- |
-| `reference` | `I18nErrorBaseConstructor` | Třída dědící z `I18nErrorBase`. Třídy, které nedědí, způsobí typovou chybu. |
-| `message` | `string \| (meta) => string` | Zpráva k registraci. Typ `meta` se odvodí z `meta` cílové třídy. |
-| `lang` | `string \| Iterable<string>` | Cílový jazyk. Jednotlivý kód nebo iterovatelný objekt kódů (např. pole). |
+| `reference` | `I18nErrorBaseConstructor` | Třída dědící z `I18nErrorBase`. Ostatní třídy jsou typovou chybou. |
+| `message` | `string \| (meta) => string` | Zpráva k registraci. `meta` se odvodí z cílové třídy. |
+| `lang` | `string \| Iterable<string>` | Cílový jazyk. Jednotlivý kód nebo iterovatelný objekt (např. pole). |
 
-Řetězec se interně převede na funkci a uloží. Opětovná registrace stejné třídy a jazyka původní hodnotu přepíše. Úložištěm je `WeakMap` v `globalThis.i18n_error_base__message_map`, kde klíčem je třída a hodnotou `Map` od jazyka k funkci.
+Opětovná registrace stejné třídy a jazyka hodnotu přepíše.
 
 ## Typy [#types]
 
@@ -95,7 +93,7 @@ type ErrorMeta = {
 };
 ```
 
-Výchozí omezení pro `TMeta`. Představuje objekt jen pro čtení s libovolnými vlastnostmi.
+Výchozí omezení pro `TMeta`. Objekt jen pro čtení s libovolnými vlastnostmi.
 
 ### `ErrorOptions` [#error-options]
 
@@ -109,7 +107,7 @@ type ErrorOptions =
     : { readonly cause?: unknown };
 ```
 
-Typ odvozený z druhého argumentu konstruktoru `Error` v daném běhovém prostředí. Lze předat volby obsahující `cause`. Druhá větev je fallback pro starší prostředí.
+Typ odvozený z druhého argumentu `Error`. Lze předat `cause`.
 
 ### `MessageFactory<TMeta>` [#message-factory]
 
@@ -119,11 +117,11 @@ interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 }
 ```
 
-Funkce generující zprávu z `meta`. Lze ji použít jak pro výchozí zprávu konstruktoru, tak pro registrovanou hodnotu `setErrorMessage`.
+Funkce generující zprávu z `meta`. Používá se pro výchozí i registrované zprávy.
 
 ### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
 
-Typ představující přetížení argumentů konstruktoru.
+Přetížení argumentů konstruktoru.
 
 ```ts
 type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
@@ -134,7 +132,7 @@ type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
     : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
 ```
 
-Pouze pokud je `TMeta` typu `undefined`, je povolena zkrácená forma bez `meta`.
+Bez `meta` jen tehdy, je-li `TMeta` typu `undefined`.
 
 ### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
 
@@ -144,10 +142,9 @@ interface I18nErrorBaseConstructor {
 }
 ```
 
-Typ prvního argumentu `setErrorMessage`. Vnitřní symbol brání na typové úrovni příměsi tříd, které nedědí z `I18nErrorBase`.
+Typ prvního argumentu `setErrorMessage`.
 
 ## Poznámky [#notes]
 
-- Výchozí hodnota `lang` používaná k vyhodnocení `message` je `"en"`. Explicitně přepínejte pomocí `setGlobalConfig({ lang })`
-- Kódy jazyků se nenormalizují ani neexistuje fallback řetězec (např. ústup z `en-US` na `en`). Neregistrované jazyky vždy použijí výchozí zprávu
-- Registrační data se uchovávají v `WeakMap` celého procesu. Chcete-li je v testech izolovat, můžete je zahodit pomocí `globalThis.i18n_error_base__message_map = undefined`
+- Výchozí `lang` je `"en"`. Přepínejte pomocí `setGlobalConfig({ lang })`
+- Bez normalizace kódů jazyků a fallback řetězce (např. `en-US` → `en`). Neregistrované jazyky používají výchozí zprávu

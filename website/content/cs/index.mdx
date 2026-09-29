@@ -3,7 +3,7 @@ title: i18n-error-base
 description: Základní třída Error, která přepíná chybové zprávy podle nastavení jazyka Valibotu.
 ---
 
-Základní třída pro dědění z `Error`, která dynamicky přepíná `message` podle globálního nastavení jazyka (`lang`) Valibotu.
+Základní třída `Error`, která přepíná `message` podle `lang` Valibotu.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -23,45 +23,44 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Resource not found: user
 ```
 
-Protože se aktuální `lang` resolvuje při každém přístupu k `message`, lze jazyk přepnout bez opětovného vytváření instancí. Pro jazyky bez registrace se použije výchozí zpráva předaná konstruktoru.
+`message` odkazuje na `lang` při každém čtení. Přepínejte bez opětovného vytváření instancí. Neregistrované jazyky používají výchozí zprávu z konstruktoru.
 
 ## Funkce [#features]
 
-- Dynamicky resolvuje `message` v souladu s `getGlobalConfig()` / `setGlobalConfig({ lang })` Valibotu
-- Zprávy pro jednotlivé jazyky se dodatečně registrují pomocí `setErrorMessage`. Lze registrovat i funkce přijímající `meta`
-- Pro jazyky bez registrace se použije výchozí zpráva z konstruktoru
-- Pomocí `static prefix` na úrovni třídy lze na začátek zprávy přidat předponu
-- `meta` se uchovává v konstruktoru a předává se funkcím generujícím zprávy
-- Protože dědí z `Error`, `instanceof Error`, `cause` i `stack` fungují beze změny
-- Zprávy se ukládají do `WeakMap`, takže nepotřebné třídy mohou být uvolněny garbage collectorem
+- Dynamicky resolvuje `message` pomocí `setGlobalConfig({ lang })` Valibotu
+- Zprávy pro jazyky dodatečně registruje pomocí `setErrorMessage`. Lze i funkce přijímající `meta`
+- Neregistrované jazyky používají výchozí zprávu z konstruktoru
+- Přidává předponu přes `static prefix` na úrovni třídy
+- Uchovává `meta` a předává je funkcím generujícím zprávy
+- `instanceof Error`, `cause` i `stack` fungují beze změny
 
 ## Struktura [#structure]
 
 <CardGroup cols={2}>
   <Card title="Instalace" href="/cs/installation" icon="download">
-    Přidání balíčku a peer závislost na Valibotu.
+    Přidání balíčku a peer závislost.
   </Card>
   <Card title="Použití" href="/cs/usage" icon="book-open">
-    Základní operace od definice tříd přes přepínání jazyků, prefix až po fallback.
+    Od definice přes přepínání, prefix až po fallback.
   </Card>
   <Card title="Referenční příručka API" href="/cs/api" icon="code">
-    Specifikace `I18nErrorBase` a `setErrorMessage` a souvisejících typů.
+    Specifikace `I18nErrorBase` a `setErrorMessage`.
   </Card>
 </CardGroup>
 
 ## Jak to funguje [#how-it-works]
 
-Konstruktor `I18nErrorBase` definuje `message` jako getter. Při každém přístupu se vyhodnocuje v následujícím pořadí.
+`message` se při každém čtení vyhodnocuje v následujícím pořadí.
 
 1. Získá `lang` z `getGlobalConfig()`. Není-li nastaveno, je to `"en"`
-2. Pokud existuje funkce `(třída × lang)` registrovaná pomocí `setErrorMessage`, spustí ji s `meta`
-3. Jinak vrátí výchozí zprávu předanou konstruktoru (řetězec nebo výsledek funkce)
+2. Pokud existuje registrace `(třída × lang)`, spustí ji s `meta`
+3. Jinak vrátí výchozí zprávu z konstruktoru
 4. Je-li nastaven `static prefix`, připojí jej na začátek
 
 :::tip
-Funkční forma výchozí zprávy se vyhodnotí při prvním přístupu a poté se ukládá do mezipaměti. Zprávy registrovaných jazyků se při každém přístupu znovu generují z `meta`, takže přepnutí jazyka se projeví okamžitě.
+Registrované zprávy se při každém čtení znovu generují z `meta`, takže přepnutí se projeví okamžitě.
 :::
 
 ## Další kroky [#next-steps]
 
-Začněte [instalací](/cs/installation) a poté si projděte celý postup v části [Použití](/cs/usage). Podrobnosti o typech a argumentech najdete v [referenční příručce API](/cs/api).
+Začněte [instalací](/cs/installation) a postup najdete v části [Použití](/cs/usage). Podrobnosti jsou v [referenční příručce API](/cs/api).

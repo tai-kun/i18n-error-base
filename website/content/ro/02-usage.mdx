@@ -7,13 +7,13 @@ description: Operații de bază pentru definirea claselor de eroare, înregistra
 
 <Steps>
   <Step title="Definiți o clasă de eroare">
-    Extindeți `I18nErrorBase<TMeta>` și definiți ca `TMeta` informațiile pe care doriți să le folosiți pentru generarea mesajelor.
+    Extindeți `I18nErrorBase<TMeta>` și definiți în `TMeta` datele pentru generarea mesajului.
   </Step>
   <Step title="Înregistrați mesajele pe limbi">
-    Înregistrați mesajul corespunzător clasei și limbii cu `setErrorMessage`.
+    Înregistrați mesajul clasei și limbii cu `setErrorMessage`.
   </Step>
   <Step title="Comutați limba și citiți message">
-    Comutați cu `setGlobalConfig({ lang })` din Valibot și accesați `error.message`.
+    Comutați cu `setGlobalConfig({ lang })` și citiți `error.message`.
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## Definirea unei clase de eroare [#define-error-class]
 
-`TMeta` este tipul informațiilor auxiliare folosite pentru generarea mesajelor. Este păstrat ca `error.meta` și transmis, de asemenea, funcției date lui `setErrorMessage`.
+`TMeta` sunt datele auxiliare pentru generarea mesajului. Sunt păstrate în `error.meta` și transmise funcțiilor înregistrate.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-Al doilea argument al constructorului este un șir sau o funcție `(meta) => string`. Al treilea argument acceptă aceleași opțiuni ca `Error`, cum ar fi `{ cause }`.
+Al doilea argument este un șir sau o funcție `(meta) => string`. Al treilea sunt opțiunile `Error`, cum ar fi `{ cause }`.
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-`I18nErrorBase` nu este destinat să fie construit direct cu `new`. Creați și utilizați întotdeauna o subclasă concretă. Înregistrările mesajelor sunt distinse per constructor (`this.constructor`), astfel un mesaj înregistrat pe o clasă părinte nu este niciodată moștenit de o clasă copil.
+Nu folosiți `new` direct; moșteniți întotdeauna. Înregistrările sunt per clasă, deci înregistrarea părintelui nu trece la copii.
 :::
 
 ## Înregistrarea mesajelor [#register-message]
 
-`setErrorMessage` înregistrează o funcție de creare a mesajelor pentru o clasă și o limbă.
+`setErrorMessage` înregistrează funcții de creare a mesajelor pentru clasă și limbă.
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-Un șir este convertit intern în `() => text`. Limbile pot fi specificate și ca un tablou de șiruri.
+Șirurile sunt permise. Limbile pot fi date ca tablou.
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-Reînregistrarea aceleiași clase și limbi suprascrie intrarea anterioară. Înregistrarea este utilizată numai atunci când constructorul de la momentul înregistrării și cel de la momentul consultării sunt identice, indiferent de verificările `instanceof`.
+Reînregistrarea aceleiași clase și limbi suprascrie intrarea. Se aplică doar constructorilor identici la înregistrare și consultare, nu prin `instanceof`.
 
 :::warning[Atenție la accesarea înainte de înregistrare]
-Forma funcțională a mesajului implicit este evaluată și memorată în cache la primul acces. Dacă citiți `message` într-o limbă neînregistrată înainte de a apela `setErrorMessage`, acea valoare implicită devine fixă. Ca regulă, înregistrați mesajele pe limbi înainte de a crea instanțe.
+Citirea `message` mai întâi fixează valoarea implicită. Înregistrați înainte de a crea instanțe.
 :::
 
 ## Comutarea limbilor [#switch-language]
 
-Comutați limbile cu configurația globală a Valibot. `message` consultă `lang` curent la fiecare accesare.
+Comutați în configurația globală Valibot. `message` consultă `lang` curent la fiecare citire.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-Valoarea implicită când `lang` nu este setat este `"en"`. Dacă o limbă solicitată nu are înregistrare, se revine la mesajul implicit transmis constructorului.
+`lang` nesetat este `"en"`. Limbile neînregistrate folosesc mesajul implicit din constructor.
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## Adăugarea unui prefix [#prefix]
 
-Setarea `static prefix` pe o clasă îl adaugă la începutul mesajului rezolvat. Se aplică atât mesajelor traduse, cât și celor implicite.
+`static prefix` este adăugat la începutul mesajului rezolvat. Se aplică mesajelor traduse și celor implicite.
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-Când nu este setat, mesajul este returnat ca atare, fără prefix.
+Când nu este setat, este returnat ca atare.
 
 ## Comportamentul ca Error [#error-behavior]
 
 - `error instanceof Error`, `instanceof I18nErrorBase` și `instanceof <clasa concretă>` sunt toate `true`
-- `message` este enumerabil (inclus în `Object.keys(error)`)
 - `String(error)` / `error.toString()` includ mesajul rezolvat (de ex. `"Error: ..."`)
-- `cause` este păstrat prin `new TestError(meta, message, { cause })`. Ca polyfill pentru mediile de execuție mai vechi, există o tratare care atribuie `options.cause` atunci când `cause` nu este acceptat
+- `cause` este păstrat prin `{ cause }`
 
 ## Modele comune [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-Apelanții trebuie să se preocupe doar de `meta`, ceea ce evită duplicarea textului implicit (aici în engleză).
+Apelanții transmit doar `meta`, ceea ce evită duplicarea textului implicit.
 
 ### Înregistrarea mai multor limbi deodată [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-Codurile de limbă nu sunt normalizate. `"en"` și `"en-US"` sunt tratate ca chei separate, deci înregistrați explicit fiecare cod de care aveți nevoie.
+Codurile de limbă nu sunt normalizate. `"en"` și `"en-US"` sunt chei separate, deci înregistrați explicit codurile necesare.

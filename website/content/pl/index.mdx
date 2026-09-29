@@ -3,7 +3,7 @@ title: i18n-error-base
 description: Klasa bazowa Error, która przełącza komunikaty o błędach zgodnie z ustawieniem językowym Valibot.
 ---
 
-Klasa bazowa do dziedziczenia po `Error`, która dynamicznie przełącza `message` zgodnie z globalnym ustawieniem językowym Valibot (`lang`).
+Bazowa klasa `Error`, która przełącza `message` wraz z `lang` Valibotu.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -23,45 +23,44 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Resource not found: user
 ```
 
-Ponieważ bieżący `lang` jest odczytywany przy każdym dostępie do `message`, język można przełączać bez ponownego tworzenia instancji. Dla języków bez zarejestrowanego komunikatu stosowany jest komunikat domyślny przekazany do konstruktora.
+`message` odwołuje się do `lang` przy każdym odczycie. Przełącz bez odtwarzania instancji. Niezarejestrowane języki używają domyślnego komunikatu z konstruktora.
 
 ## Funkcje [#features]
 
-- Rozwiązuje `message` dynamicznie zgodnie z `getGlobalConfig()` / `setGlobalConfig({ lang })` biblioteki Valibot
-- Komunikaty dla poszczególnych języków rejestruje się później za pomocą `setErrorMessage`. Można też rejestrować funkcje przyjmujące `meta`
-- Dla języków bez rejestracji stosowany jest komunikat domyślny z konstruktora
-- Prefiks na początku komunikatu można dodać za pomocą `static prefix` na poziomie klasy
-- Przechowuje `meta` w konstruktorze i przekazuje je do funkcji generujących komunikaty
-- Ponieważ dziedziczy po `Error`, `instanceof Error`, `cause` i `stack` działają jak zwykle
-- Komunikaty są przechowywane w `WeakMap`, więc nieużywane już klasy są usuwane przez garbage collector
+- Dynamicznie rozwiązuje `message` przez `setGlobalConfig({ lang })` Valibotu
+- Rejestruje komunikaty dla języków później przez `setErrorMessage`. Dozwolone są też funkcje przyjmujące `meta`
+- Niezarejestrowane języki używają domyślnego komunikatu z konstruktora
+- Dodaje prefiks przez `static prefix` na poziomie klasy
+- Przechowuje `meta` i przekazuje je do funkcji tworzących komunikat
+- `instanceof Error`, `cause` i `stack` działają jak zwykle
 
 ## Struktura [#structure]
 
 <CardGroup cols={2}>
   <Card title="Instalacja" href="/pl/installation" icon="download">
-    Dodawanie pakietu i zależność peer od Valibot.
+    Dodawanie pakietu i zależność peer.
   </Card>
   <Card title="Użycie" href="/pl/usage" icon="book-open">
-    Podstawowe operacje od definiowania klas po przełączanie języków, prefiksy i fallback.
+    Od definicji po przełączanie, prefiks i fallback.
   </Card>
   <Card title="Dokumentacja API" href="/pl/api" icon="code">
-    Specyfikacja `I18nErrorBase` i `setErrorMessage` oraz powiązanych typów.
+    Specyfikacja `I18nErrorBase` i `setErrorMessage`.
   </Card>
 </CardGroup>
 
 ## Jak to działa [#how-it-works]
 
-Konstruktor `I18nErrorBase` definiuje `message` jako getter. Przy każdym dostępie jest on rozwiązywany w następującej kolejności.
+`message` jest rozwiązywany przy każdym odczycie w następującej kolejności.
 
-1. Pobiera `lang` z `getGlobalConfig()`. Gdy nie jest ustawiony, wynosi `"en"`
-2. Jeśli istnieje funkcja `(klasa × lang)` zarejestrowana przez `setErrorMessage`, wykonuje ją z `meta`
-3. W przeciwnym razie zwraca komunikat domyślny przekazany do konstruktora (ciąg znaków lub wynik funkcji)
+1. Pobiera `lang` z `getGlobalConfig()`. Gdy nie ustawiono, `"en"`
+2. Jeśli istnieje rejestracja `(klasa × lang)`, wykonuje ją z `meta`
+3. W przeciwnym razie zwraca domyślny komunikat z konstruktora
 4. Jeśli ustawiono `static prefix`, dodaje go na początku
 
 :::tip
-Funkcyjna postać komunikatu domyślnego jest obliczana przy pierwszym dostępie i potem przechowywana w pamięci podręcznej. Komunikaty zarejestrowanych języków są generowane ponownie z `meta` przy każdym dostępie, więc przełączenie języka działa natychmiast.
+Zarejestrowane komunikaty są generowane z `meta` przy każdym odczycie, więc przełączenie działa natychmiast.
 :::
 
 ## Następne kroki [#next-steps]
 
-Zacznij od [Instalacji](/pl/installation), a następnie przejdź przez cały przepływ w [Użyciu](/pl/usage). Szczegóły typów i argumentów opisano w [Dokumentacji API](/pl/api).
+Zacznij od [Instalacji](/pl/installation), potem zobacz przepływ w [Użyciu](/pl/usage). Szczegóły w [Dokumentacji API](/pl/api).

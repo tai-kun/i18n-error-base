@@ -8,7 +8,7 @@ description: i18n-error-base-এর ইনস্টল পদ্ধতি ও �
 - Node.js-এর মতো ES মডিউল পরিচালনাকারী রানটাইম পরিবেশ
 - পিয়ার নির্ভরতা হিসেবে `valibot@^1.0.0` আবশ্যক
 
-`I18nErrorBase` অভ্যন্তরীণভাবে Valibot-এর `getGlobalConfig()` দেখে বর্তমান `lang` নেয়। Valibot ব্যবহার না করা প্রজেক্টেও, শুধু ভাষা বদলের জন্য `setGlobalConfig({ lang })` ডাকলেই কাজ করে।
+`message` Valibot-এর `getGlobalConfig()`-এর `lang` অনুসরণ করে।
 
 ## ইনস্টলেশন [#installation]
 
@@ -23,7 +23,7 @@ npm i valibot
 ```
 
 :::warning[পিয়ার নির্ভরতা সম্পর্কে সতর্কতা]
-`i18n-error-base` `valibot` বান্ডল করে না। হোস্ট পক্ষে `valibot@^1.0.0` না থাকলে, ইমপোর্টের সময় রিজলিউশন ত্রুটি হবে।
+`valibot` বান্ডল করা হয় না। `valibot@^1.0.0` ছাড়া ইমপোর্ট ব্যর্থ হয়।
 :::
 
 ## ইমপোর্ট [#import]
@@ -33,17 +33,6 @@ import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
 import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
 ```
 
-ডিফল্ট এক্সপোর্টও দেওয়া আছে।
-
-```ts
-import I18nErrorBase from "i18n-error-base";
-import setErrorMessage from "i18n-error-base";
-```
-
-:::note
-প্যাকেজটি ESM (`"type": "module"`) হিসেবে বিতরণ করা হয়, কোনো পার্শ্বপ্রতিক্রিয়া নেই (`"sideEffects": false`)। টাইপ সংজ্ঞা `dist/src/*.d.ts` থেকে রিজলভ হয়।
-:::
-
 ## পরবর্তী পদক্ষেপ [#next-steps]
 
-[ব্যবহারবিধি](/bn/usage)-তে এরর ক্লাসের সংজ্ঞা ও ভাষা বদলের মূল বিষয় দেখুন।
+সংজ্ঞা ও বদলের মূল বিষয়ের জন্য [ব্যবহারবিধি](/bn/usage) দেখুন।

@@ -5,7 +5,7 @@ description: I18nErrorBase, setErrorMessage ve ilgili türlerin belirtimi.
 
 ## `I18nErrorBase` [#i18n-error-base]
 
-`Error` sınıfını genişletmek için kullanılan temel sınıftır. `message` değerini alıcı (getter) olarak yeniden tanımlar ve Valibot'un `lang` değerine göre dinamik olarak çözer.
+`Error` genişletmek için temel sınıftır. `message`, `lang` değerine göre çözülür.
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -17,20 +17,20 @@ class MyError extends I18nErrorBase<{ code: string }> {}
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | `meta` olarak saklanan ek bilginin türü. Kullanılmıyorsa `undefined` belirtin. |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | `meta` türü. Kullanılmıyorsa `undefined` belirtin. |
 
 ### Statik özellikler [#static-props]
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `prefix?` | `string` | `undefined` | Ayarlanırsa çözümlenmiş mesajın başına eklenir. |
+| `prefix?` | `string` | `undefined` | Çözümlenmiş mesajın başına eklenir. |
 
 ### Örnek özellikleri [#instance-props]
 
 | Prop | Type | Description |
 | ---- | ---- | ----------- |
-| `meta` | `TMeta` | Oluşturucuya geçirilen ek bilgi. Okunabilir ve yazılabilir. |
-| `message` | `string` | Geçerli `lang` değerine göre çözümlenen mesaj. Numaralandırılabilir. |
+| `meta` | `TMeta` | Oluşturucudan ek bilgi. Okunabilir ve yazılabilir. |
+| `message` | `string` | Geçerli `lang` değerine göre çözülür. Numaralandırılabilir. |
 | `cause` | `unknown` | `ErrorOptions` ile geçirilen neden. `Error` standart özelliğidir. |
 
 ### Oluşturucu [#constructor]
@@ -51,20 +51,18 @@ new MyError(meta, message, options?)
 | Parametre | Tür | Açıklama |
 | --------- | --- | -------- |
 | `meta` | `TMeta` | Mesaj üretiminde kullanılan ek bilgi. |
-| `message` | `string \| MessageFactory<TMeta>` | Kayıtlı mesajı olmayan dillerde kullanılan varsayılan mesaj. İşlev ise `meta` alır. |
+| `message` | `string \| MessageFactory<TMeta>` | Kayıtsız diller için varsayılan mesaj. İşlev ise `meta` alır. |
 | `options` | `ErrorOptions` | `Error` 2. bağımsız değişkeniyle uyumlu seçenekler (`{ cause }` gibi). |
-
-`message` olarak dizge dışı bir değer (sayı gibi) geçirilirse `String(...)` ile dizgeye dönüştürülür. Mesaj üretim işlevi boş dizge döndürürse `message` de boş dizge olur.
 
 ### Çözümleme sırası [#resolution-order]
 
 1. `getGlobalConfig()` işlevinden `lang` alınır (ayarlanmamışsa `"en"`)
-2. `setErrorMessage` ile kaydedilmiş ilgili sınıfa ve dile ait işlev `meta` ile çalıştırılır
-3. Kayıt yoksa oluşturucunun varsayılan mesajı kullanılır (dizge veya işlevin değerlendirme sonucu. İlk değerlendirmeden sonra önbelleğe alınır)
+2. O sınıf ve dile kayıtlı işlev `meta` ile çalıştırılır
+3. Kayıt yoksa varsayılan mesaj kullanılır
 4. `static prefix` varsa başa eklenir
 
 :::note
-Kayıt eşleştirmesi `this.constructor` tam eşitliğidir. Üst sınıfa yapılan kayıtlar alt sınıflara aktarılmaz. Gerekli her sınıf için ayrı ayrı kaydedin.
+Kayıt sınıf bazındadır. Üst kaydı alta aktarılmaz. Her sınıf için kaydedin.
 :::
 
 ## `setErrorMessage` [#set-error-message]
@@ -79,11 +77,11 @@ setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
 
 | Parametre | Tür | Açıklama |
 | --------- | --- | -------- |
-| `reference` | `I18nErrorBaseConstructor` | `I18nErrorBase` sınıfından türetilmiş sınıf. Türetmemiş sınıflar tür hatası olur. |
-| `message` | `string \| (meta) => string` | Kaydedilecek mesaj. `meta` türü hedef sınıfın `meta` değerinden çıkarılır. |
-| `lang` | `string \| Iterable<string>` | Hedef dil. Tek kod veya kodların yinelenebilir nesnesi (dizi gibi). |
+| `reference` | `I18nErrorBaseConstructor` | `I18nErrorBase` türevi sınıf. Değilse tür hatası. |
+| `message` | `string \| (meta) => string` | Kaydedilecek mesaj. `meta` türü hedef sınıftan çıkarılır. |
+| `lang` | `string \| Iterable<string>` | Hedef dil. Tek kod veya yinelenebilir nesne (dizi gibi). |
 
-Dizgeler dahili olarak işleve dönüştürülerek saklanır. Aynı sınıfa ve dile yeniden kayıt üzerine yazar. Saklama yeri `globalThis.i18n_error_base__message_map` üzerindeki `WeakMap` olup, anahtar sınıftır ve değer dilden işleve giden bir `Map` olur.
+Aynı sınıf ve dile yeniden kayıt üzerine yazar.
 
 ## Türler [#types]
 
@@ -95,7 +93,7 @@ type ErrorMeta = {
 };
 ```
 
-`TMeta` varsayılan kısıtıdır. Rastgele özelliklere sahip salt okunur nesneyi temsil eder.
+`TMeta` varsayılan kısıtıdır. Rastgele özellikli salt okunur nesne.
 
 ### `ErrorOptions` [#error-options]
 
@@ -109,7 +107,7 @@ type ErrorOptions =
     : { readonly cause?: unknown };
 ```
 
-Çalıştırma ortamının `Error` oluşturucu 2. bağımsız değişkeninden türetilmiş türdür. `cause` içeren seçenekler geçirilebilir. İkinci dal eski ortamlara yönelik geri dönüş içindir.
+`Error` 2. bağımsız değişkeninden türetilmiş türdür. `cause` geçirilebilir.
 
 ### `MessageFactory<TMeta>` [#message-factory]
 
@@ -119,11 +117,11 @@ interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 }
 ```
 
-`meta` değerinden mesaj üreten işlevdir. Oluşturucunun varsayılan mesajında da `setErrorMessage` kayıt değerinde de kullanılabilir.
+`meta` değerinden mesaj üreten işlevdir. Varsayılan ve kayıtlı için kullanılır.
 
 ### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
 
-Oluşturucu bağımsız değişkeni aşırı yüklemelerini temsil eden türdür.
+Oluşturucu bağımsız değişkeni aşırı yüklemeleri.
 
 ```ts
 type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
@@ -134,7 +132,7 @@ type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
     : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
 ```
 
-`meta` içermeyen biçim yalnızca `TMeta` değeri `undefined` olduğunda izin verilir.
+`meta` içermeyen biçim yalnızca `TMeta` `undefined` olduğunda izin verilir.
 
 ### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
 
@@ -144,10 +142,9 @@ interface I18nErrorBaseConstructor {
 }
 ```
 
-`setErrorMessage` 1. bağımsız değişkeninin türüdür. Dahili tanımlama simgesi sayesinde, `I18nErrorBase` sınıfından türememiş sınıfların karışması tür düzeyinde engellenir.
+`setErrorMessage` 1. bağımsız değişkeninin türüdür.
 
 ## Notlar [#notes]
 
-- `message` çözümlemesinde kullanılan `lang` varsayılan değeri `"en"` olur. `setGlobalConfig({ lang })` ile açıkça değiştirin
-- Dil kodu normalleştirme veya geri dönüş zinciri (ör: `en-US` değerinden `en` değerine dönüş) yoktur. Kayıtsız diller her zaman varsayılan mesaj olur
-- Kayıt verileri süreç genelindeki `WeakMap` içinde saklanır. Testlerde yalıtmak isterseniz `globalThis.i18n_error_base__message_map = undefined` ile yok edebilirsiniz
+- `lang` varsayılan değeri `"en"` olur. `setGlobalConfig({ lang })` ile açıkça değiştirin
+- Dil kodu normalleştirme veya geri dönüş zinciri (ör: `en-US` → `en`) yoktur. Kayıtsız diller varsayılan mesaj olur

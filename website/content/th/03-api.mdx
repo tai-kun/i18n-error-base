@@ -5,7 +5,7 @@ description: ข้อมูลจำเพาะของ I18nErrorBase, setErr
 
 ## `I18nErrorBase` [#i18n-error-base]
 
-เป็นคลาสพื้นฐานสำหรับการสืบทอด `Error` โดยนิยาม `message` ใหม่เป็น getter และ resolve แบบไดนามิกตาม `lang` ของ Valibot
+คลาสพื้นฐานสำหรับสืบทอด `Error` `message` จะ resolve ตาม `lang`
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -17,31 +17,31 @@ class MyError extends I18nErrorBase<{ code: string }> {}
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | ชนิดของข้อมูลประกอบที่เก็บเป็น `meta` หากไม่ใช้ให้ระบุ `undefined` |
+| `TMeta` | `ErrorMeta \| undefined` | `ErrorMeta \| undefined` | ชนิดของ `meta` หากไม่ใช้ให้ระบุ `undefined` |
 
 ### คุณสมบัติสแตติก [#static-props]
 
 | Prop | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `prefix?` | `string` | `undefined` | หากตั้งค่าจะเชื่อมต่อไว้ที่ด้านหน้าของข้อความที่ resolve แล้ว |
+| `prefix?` | `string` | `undefined` | เชื่อมไว้หน้าข้อความที่ resolve แล้ว |
 
 ### คุณสมบัติอินสแตนซ์ [#instance-props]
 
 | Prop | Type | Description |
 | ---- | ---- | ----------- |
-| `meta` | `TMeta` | ข้อมูลประกอบที่ส่งให้คอนสตรักเตอร์ สามารถอ่านและเขียนได้ |
-| `message` | `string` | ข้อความที่ resolve ตาม `lang` ปัจจุบัน สามารถ enumerate ได้ |
-| `cause` | `unknown` | สาเหตุที่ส่งผ่าน `ErrorOptions` เป็นคุณสมบัติมาตรฐานของ `Error` |
+| `meta` | `TMeta` | ข้อมูลประกอบจากคอนสตรักเตอร์ อ่านและเขียนได้ |
+| `message` | `string` | resolve ตาม `lang` ปัจจุบัน สามารถ enumerate ได้ |
+| `cause` | `unknown` | สาเหตุผ่าน `ErrorOptions` คุณสมบัติมาตรฐานของ `Error` |
 
 ### คอนสตรักเตอร์ [#constructor]
 
-หาก `TMeta` ไม่รวม `undefined` `meta` จะเป็นค่าบังคับ
+หาก `TMeta` ไม่รวม `undefined` `meta` เป็นค่าบังคับ
 
 ```ts
 new MyError(meta, message, options?)
 ```
 
-หาก `TMeta` เป็น `undefined` สามารถละ `meta` ได้
+หาก `TMeta` เป็น `undefined` ละ `meta` ได้
 
 ```ts
 new MyError(message, options?)
@@ -50,26 +50,24 @@ new MyError(meta, message, options?)
 
 | พารามิเตอร์ | ชนิด | คำอธิบาย |
 | ------------ | -- | ---- |
-| `meta` | `TMeta` | ข้อมูลประกอบที่ใช้สร้างข้อความ |
-| `message` | `string \| MessageFactory<TMeta>` | ข้อความเริ่มต้นที่ใช้สำหรับภาษาที่ยังไม่ได้ลงทะเบียน หากเป็นฟังก์ชันจะรับ `meta` |
-| `options` | `ErrorOptions` | ออปชันที่เข้ากันได้กับอาร์กิวเมนต์ตัวที่ 2 ของ `Error` (เช่น `{ cause }`) |
-
-หากส่งค่าที่ไม่ใช่สตริง (เช่นตัวเลข) ให้ `message` จะถูกแปลงเป็นสตริงด้วย `String(...)` หาก message factory คืนสตริงว่าง `message` ก็จะเป็นสตริงว่างเช่นกัน
+| `meta` | `TMeta` | ข้อมูลประกอบสำหรับสร้างข้อความ |
+| `message` | `string \| MessageFactory<TMeta>` | ข้อความเริ่มต้นสำหรับภาษาที่ยังไม่ลงทะเบียน หากเป็นฟังก์ชันจะรับ `meta` |
+| `options` | `ErrorOptions` | ออปชันเข้ากันได้กับอาร์กิวเมนต์ตัวที่ 2 ของ `Error` (เช่น `{ cause }`) |
 
 ### ลำดับการ resolve [#resolution-order]
 
-1. ดึง `lang` ของ `getGlobalConfig()` (หากยังไม่ได้ตั้งค่าจะเป็น `"en"`)
-2. เรียกใช้ฟังก์ชันของคลาสและภาษานั้นที่ลงทะเบียนด้วย `setErrorMessage` พร้อม `meta`
-3. หากยังไม่ได้ลงทะเบียน จะใช้ข้อความเริ่มต้นของคอนสตรักเตอร์ (สตริงหรือผลการประเมินฟังก์ชัน แคชหลังประเมินครั้งแรก)
-4. หากมี `static prefix` จะเชื่อมต่อไว้ที่ด้านหน้า
+1. ดึง `lang` ของ `getGlobalConfig()` (หากยังไม่ตั้งค่าจะเป็น `"en"`)
+2. เรียกฟังก์ชันที่ลงทะเบียนของคลาสและภาษานั้นพร้อม `meta`
+3. หากยังไม่ลงทะเบียน ใช้ข้อความเริ่มต้น
+4. หากมี `static prefix` เชื่อมไว้ด้านหน้า
 
 :::note
-การจับคู่การลงทะเบียนใช้การตรงกันทั้งหมดของ `this.constructor` การลงทะเบียนในคลาสแม่จะไม่ถูกสืบทอดไปยังคลาสลูก โปรดลงทะเบียนแยกสำหรับแต่ละคลาสที่ต้องการ
+การลงทะเบียนแยกตามคลาส การลงทะเบียนของแม่ไม่ตกทอด ลงทะเบียนแยกแต่ละคลาส
 :::
 
 ## `setErrorMessage` [#set-error-message]
 
-ลงทะเบียนฟังก์ชันสร้างข้อความแยกตามภาษา
+ลงทะเบียนฟังก์ชันสร้างข้อความตามภาษา
 
 ```ts
 import { setErrorMessage } from "i18n-error-base";
@@ -79,11 +77,11 @@ setErrorMessage(MyError, (meta) => `...: ${meta.code}`, "ja");
 
 | พารามิเตอร์ | ชนิด | คำอธิบาย |
 | ------------ | -- | ---- |
-| `reference` | `I18nErrorBaseConstructor` | คลาสที่สืบทอด `I18nErrorBase` หากเป็นคลาสที่ไม่ได้สืบทอดจะเกิด type error |
-| `message` | `string \| (meta) => string` | ข้อความที่จะลงทะเบียน ชนิดของ `meta` จะถูกอนุมานจาก `meta` ของคลาสเป้าหมาย |
-| `lang` | `string \| Iterable<string>` | ภาษาเป้าหมาย รหัสเดียวหรืออ็อบเจกต์ที่ทำซ้ำได้ของรหัส (เช่นอาร์เรย์) |
+| `reference` | `I18nErrorBaseConstructor` | คลาสที่สืบทอด `I18nErrorBase` ไม่ใช่จะเกิด type error |
+| `message` | `string \| (meta) => string` | ข้อความที่จะลงทะเบียน ชนิด `meta` อนุมานจากคลาสเป้าหมาย |
+| `lang` | `string \| Iterable<string>` | ภาษาเป้าหมาย รหัสเดียวหรืออ็อบเจกต์ทำซ้ำได้ (เช่นอาร์เรย์) |
 
-สตริงจะถูกแปลงเป็นฟังก์ชันภายในก่อนเก็บไว้ การลงทะเบียนซ้ำในคลาสและภาษาเดิมจะเขียนทับ ที่เก็บคือ `WeakMap` ของ `globalThis.i18n_error_base__message_map` โดยคีย์คือคลาสและค่าคือ `Map` จากภาษาไปยังฟังก์ชัน
+การลงทะเบียนซ้ำในคลาสและภาษาเดิมจะเขียนทับ
 
 ## ชนิด [#types]
 
@@ -95,7 +93,7 @@ type ErrorMeta = {
 };
 ```
 
-เป็นข้อจำกัดเริ่มต้นของ `TMeta` แสดงถึงอ็อบเจกต์แบบอ่านอย่างเดียวที่มีคุณสมบัติตามต้องการ
+ข้อจำกัดเริ่มต้นของ `TMeta` อ็อบเจกต์อ่านอย่างเดียวที่มีคุณสมบัติตามต้องการ
 
 ### `ErrorOptions` [#error-options]
 
@@ -109,7 +107,7 @@ type ErrorOptions =
     : { readonly cause?: unknown };
 ```
 
-เป็นชนิดที่ได้จากอาร์กิวเมนต์ตัวที่ 2 ของคอนสตรักเตอร์ `Error` ในสภาพแวดล้อมรันไทม์ สามารถส่งออปชันที่มี `cause` ได้ สาขาหลังคือ fallback สำหรับสภาพแวดล้อมเก่า
+ชนิดจากอาร์กิวเมนต์ตัวที่ 2 ของ `Error` ส่ง `cause` ได้
 
 ### `MessageFactory<TMeta>` [#message-factory]
 
@@ -119,11 +117,11 @@ interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
 }
 ```
 
-เป็นฟังก์ชันที่สร้างข้อความจาก `meta` ใช้ได้ทั้งข้อความเริ่มต้นของคอนสตรักเตอร์และค่าที่ลงทะเบียนของ `setErrorMessage`
+ฟังก์ชันสร้างข้อความจาก `meta` ใช้ทั้งค่าเริ่มต้นและค่าลงทะเบียน
 
 ### `I18nErrorBaseParams<TMeta>` [#i18n-error-base-params]
 
-เป็นชนิดที่แสดง overload ของอาร์กิวเมนต์คอนสตรักเตอร์
+overload อาร์กิวเมนต์คอนสตรักเตอร์
 
 ```ts
 type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> =
@@ -134,7 +132,7 @@ type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undef
     : [meta: TMeta, message: string | MessageFactory<TMeta>, options?: ErrorOptions | undefined];
 ```
 
-เฉพาะเมื่อ `TMeta` เป็น `undefined` เท่านั้นจึงอนุญาตรูปแบบละ `meta`
+ละ `meta` ได้เฉพาะเมื่อ `TMeta` เป็น `undefined`
 
 ### `I18nErrorBaseConstructor` [#i18n-error-base-constructor]
 
@@ -144,10 +142,9 @@ interface I18nErrorBaseConstructor {
 }
 ```
 
-เป็นชนิดของอาร์กิวเมนต์ตัวที่ 1 ของ `setErrorMessage` ป้องกันการปะปนของคลาสที่ไม่ได้สืบทอด `I18nErrorBase` ในระดับชนิดด้วยสัญลักษณ์ระบุตัวตนภายใน
+ชนิดอาร์กิวเมนต์ตัวที่ 1 ของ `setErrorMessage`
 
 ## หมายเหตุเพิ่มเติม [#notes]
 
-- ค่าเริ่มต้นของ `lang` ที่ใช้ resolve `message` คือ `"en"` โปรดสลับอย่างชัดเจนด้วย `setGlobalConfig({ lang })`
-- ไม่มีการ normalize รหัสภาษาหรือ fallback chain (เช่นถอยจาก `en-US` ไป `en`) ภาษาที่ยังไม่ได้ลงทะเบียนทั้งหมดจะเป็นข้อความเริ่มต้นเหมือนกัน
-- ข้อมูลที่ลงทะเบียนจะเก็บใน `WeakMap` ของทั้งโปรเซส หากต้องการแยกในเทสต์ สามารถทิ้งได้ด้วย `globalThis.i18n_error_base__message_map = undefined`
+- ค่าเริ่มต้น `lang` คือ `"en"` สลับชัดเจนด้วย `setGlobalConfig({ lang })`
+- ไม่ normalize รหัสภาษาหรือ fallback chain (เช่น `en-US` → `en`) ภาษาที่ยังไม่ลงทะเบียนเป็นข้อความเริ่มต้น

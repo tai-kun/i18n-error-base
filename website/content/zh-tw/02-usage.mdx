@@ -13,7 +13,7 @@ description: 定義錯誤類別、註冊訊息、切換語言、前綴、退回�
     使用 `setErrorMessage` 註冊類別與語言對應的訊息。
   </Step>
   <Step title="切換語言並讀取 message">
-    透過 Valibot 的 `setGlobalConfig({ lang })` 切換語言，並存取 `error.message`。
+    透過 `setGlobalConfig({ lang })` 切換，並讀取 `error.message`。
   </Step>
 </Steps>
 
@@ -44,7 +44,7 @@ console.log(error.message); // Code: ERR, Limit: 50
 
 ## 定義錯誤類別 [#define-error-class]
 
-`TMeta` 是用於訊息產生的附加資訊型別。它會被保留為 `error.meta`，並傳遞給 `setErrorMessage` 的函式。
+`TMeta` 是用於訊息產生的附加資訊。保留於 `error.meta`，並傳遞給註冊函式。
 
 ```ts
 import { I18nErrorBase } from "i18n-error-base";
@@ -55,7 +55,7 @@ const error = new NotFoundError({ resource: "user" }, "fallback message");
 console.log(error.meta); // { resource: "user" }
 ```
 
-建構函式的第二個參數為字串或 `(meta) => string` 函式。第三個參數可傳入與 `Error` 相同的 `{ cause }` 等選項。
+第二個參數是字串或 `(meta) => string`。第三個參數是與 `Error` 相同的 `{ cause }` 等選項。
 
 ```ts
 class TestError extends I18nErrorBase<{ code: string }> {}
@@ -76,12 +76,12 @@ console.log(a.meta); // undefined
 ```
 
 :::note
-不建議直接對 `I18nErrorBase` 本身使用 `new`。請務必繼承並建立具體類別後再使用。由於訊息的註冊目標依建構函式（`this.constructor`）區分，因此註冊至父類別的訊息不會被子類別繼承。
+請勿直接 `new`，務必繼承後使用。註冊按類別區分，父類別的註冊不會繼承給子類別。
 :::
 
 ## 註冊訊息 [#register-message]
 
-`setErrorMessage` 用於註冊類別與語言對應的訊息產生函式。
+`setErrorMessage` 註冊按類別、按語言的產生函式。
 
 ```ts
 import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
@@ -92,22 +92,22 @@ setErrorMessage(TestError, ({ code }) => `エラーコード: ${code}`, "ja");
 setErrorMessage(TestError, "something went wrong", "en");
 ```
 
-傳入字串時，內部會轉換為 `() => text`。語言亦可用字串陣列指定。
+亦可指定字串。語言亦可用陣列指定。
 
 ```ts
 const message = ({ code }: { code: string }) => `エラーコード: ${code}`;
 setErrorMessage(TestError, message, ["ja", "ko", "zh"]);
 ```
 
-對同一類別與同一語言重新註冊時會覆寫。與 `instanceof` 的判定無關，僅在註冊時與參照時的建構函式相同時，才會使用註冊內容。
+同一類別與同一語言的重新註冊會覆寫。僅在註冊時與參照時的建構函式相同時使用，與 `instanceof` 無關。
 
 :::warning[注意在註冊前存取]
-預設訊息的函式形式會在首次存取時求值並快取。若在呼叫 `setErrorMessage` 之前便以未註冊的語言讀取 `message`，該預設值會被固定。原則上請在建立執行個體之前註冊各語言的訊息。
+先讀取 `message` 會固定預設值。請在建立執行個體之前完成註冊。
 :::
 
 ## 切換語言 [#switch-language]
 
-透過 Valibot 的全域設定切換語言。每次存取 `message` 時都會參照目前的 `lang`。
+透過 Valibot 的全域設定切換。`message` 在每次讀取時參照目前的 `lang`。
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -119,7 +119,7 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // 英語の登録メッセージ or 既定メッセージ
 ```
 
-未設定 `lang` 時的預設值為 `"en"`。請求未註冊的語言時，將退回至傳遞給建構函式的預設訊息。
+未設定 `lang` 時為 `"en"`。未註冊的語言使用建構函式的預設訊息。
 
 ```ts
 setErrorMessage(BusinessRuleError, () => "日本語メッセージ", "ja");
@@ -130,7 +130,7 @@ console.log(error.message); // "Code: ERR, Limit: 50"（既定メッセージ）
 
 ## 加上前綴 [#prefix]
 
-在類別上設定 `static prefix` 後，會串接至解析後訊息的開頭。對翻譯訊息與預設訊息皆會生效。
+`static prefix` 會串接至解析後訊息的開頭。對翻譯訊息與預設訊息皆會生效。
 
 ```ts
 class PrefixedError extends I18nErrorBase<{ code: string }> {
@@ -149,14 +149,13 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // "[ERROR] fallback"
 ```
 
-未設定時將不帶前綴、按原樣回傳。
+未設定時按原樣回傳。
 
 ## 作為 Error 的行為 [#error-behavior]
 
 - `error instanceof Error`、`instanceof I18nErrorBase`、`instanceof 具體類別` 皆為 `true`
-- `message` 可列舉（包含於 `Object.keys(error)` 中）
 - `String(error)` / `error.toString()` 包含解析後的訊息（例如 `"Error: ..."`）
-- `cause` 透過 `new TestError(meta, message, { cause })` 保留。作為面向舊版執行環境的相容處理，當不支援 `cause` 時會包含代入 `options.cause` 的邏輯
+- `cause` 透過 `{ cause }` 保留
 
 ## 常見模式 [#common-patterns]
 
@@ -170,7 +169,7 @@ class BusinessRuleError extends I18nErrorBase<{ code: string; limit: number }> {
 }
 ```
 
-呼叫端只需關注 `meta`，可避免預設文字（此處為英文）的重複。
+呼叫端只需傳遞 `meta`，可避免預設文字的重複。
 
 ### 批次註冊多種語言 [#register-multiple-languages]
 
@@ -179,4 +178,4 @@ setErrorMessage(MyError, "エラーが発生しました", ["ja"]);
 setErrorMessage(MyError, "An error occurred", ["en", "en-US"]);
 ```
 
-語言代碼不會被正規化。`"en"` 與 `"en-US"` 會被視為不同的鍵，請明確註冊所需的代碼。
+語言代碼不會正規化。`"en"` 與 `"en-US"` 是不同的鍵，請明確註冊所需的代碼。

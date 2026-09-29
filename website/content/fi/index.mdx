@@ -3,7 +3,7 @@ title: i18n-error-base
 description: Valibotin kieliasetuksen mukana vaihtuvia virheviestejä tarjoava Error-perusluokka.
 ---
 
-`Error`-luokan periyttämiseen tarkoitettu perusluokka, joka vaihtaa `message`-arvoa dynaamisesti Valibotin globaalin kieliasetuksen (`lang`) mukaisesti.
+`Error`-perusluokka, joka vaihtaa `message`-arvoa Valibotin `lang`-arvon mukaisesti.
 
 ```ts
 import { setGlobalConfig } from "valibot";
@@ -23,45 +23,44 @@ setGlobalConfig({ lang: "en" });
 console.log(error.message); // Resource not found: user
 ```
 
-Koska senhetkinen `lang` tarkistetaan aina `message`-ominaisuutta käytettäessä, kielen voi vaihtaa ilman uusien instanssien luomista. Kielille, joille viestiä ei ole rekisteröity, käytetään rakentajalle annettua oletusviestiä.
+`message` viittaa `lang`-arvoon jokaisella käyttökerralla. Vaihda ilman uusien instanssien luomista. Rekisteröimättömät kielet käyttävät rakentajan oletusviestiä.
 
 ## Ominaisuudet [#features]
 
-- Ratkaisee `message`-arvon dynaamisesti Valibotin `getGlobalConfig()` / `setGlobalConfig({ lang })` -asetuksen mukaisesti
-- Kielikohtaiset viestit rekisteröidään jälkikäteen `setErrorMessage`-funktiolla. Voit rekisteröidä myös `meta`-arvon vastaanottavia funktioita
-- Kielille, joille viestiä ei ole rekisteröity, käytetään rakentajan oletusviestiä
-- Luokkakohtaisella `static prefix` -ominaisuudella viestin alkuun voidaan lisätä etuliite
-- Säilyttää rakentajalle annetun `meta`-arvon ja välittää sen viestin luontifunktioille
-- Perii `Error`-luokan, joten `instanceof Error`, `cause` ja `stack` toimivat sellaisenaan
-- Viestit tallennetaan `WeakMap`-rakenteeseen, joten tarpeettomat luokat voidaan roskienkerätä
+- Ratkaisee `message`-arvon dynaamisesti Valibotin `setGlobalConfig({ lang })` -asetuksella
+- Kielikohtaiset viestit rekisteröidään jälkikäteen `setErrorMessage`-funktiolla. Myös `meta`-arvon vastaanottavat funktiot sallitaan
+- Rekisteröimättömät kielet käyttävät rakentajan oletusviestiä
+- Lisää etuliitteen luokkakohtaisella `static prefix` -ominaisuudella
+- Säilyttää `meta`-arvon ja välittää sen viestin luontifunktioille
+- `instanceof Error`, `cause` ja `stack` toimivat sellaisenaan
 
 ## Rakenne [#structure]
 
 <CardGroup cols={2}>
   <Card title="Asennus" href="/fi/installation" icon="download">
-    Paketin lisääminen ja Valibotin vertaisriippuvuus.
+    Paketin ja vertaisriippuvuuden lisääminen.
   </Card>
   <Card title="Käyttö" href="/fi/usage" icon="book-open">
-    Perustoiminnot luokan määrittämisestä kielen vaihtamiseen, etuliitteeseen ja varaviestiin.
+    Määrittämisestä kielen vaihtamiseen, etuliitteeseen ja varaviestiin.
   </Card>
   <Card title="API-viite" href="/fi/api" icon="code">
-    `I18nErrorBase`- ja `setErrorMessage`-määritykset sekä niihin liittyvät tyypit.
+    `I18nErrorBase`- ja `setErrorMessage`-määritykset.
   </Card>
 </CardGroup>
 
 ## Miten se toimii [#how-it-works]
 
-`I18nErrorBase`-rakentaja määrittää `message`-ominaisuuden getterinä. Se ratkaistaan jokaisella käyttökerralla seuraavassa järjestyksessä.
+`message` ratkaistaan jokaisella käyttökerralla seuraavassa järjestyksessä.
 
-1. Hakee arvon `lang` funktiolla `getGlobalConfig()`. Jos sitä ei ole asetettu, arvo on `"en"`
-2. Jos `setErrorMessage`-funktiolla rekisteröity `(luokka × lang)` -funktio löytyy, se suoritetaan `meta`-arvolla
-3. Muussa tapauksessa palautetaan rakentajalle annettu merkkijono tai funktion tulos (oletusviesti)
+1. Hakee arvon `lang` funktiolla `getGlobalConfig()`. `"en"`, jos sitä ei ole asetettu
+2. Jos `(luokka × lang)` -rekisteröinti löytyy, se suoritetaan `meta`-arvolla
+3. Muussa tapauksessa palautetaan rakentajan oletusviesti
 4. Jos `static prefix` on asetettu, se liitetään alkuun
 
 :::tip
-Oletusviestin funktiomuoto arvioidaan ensimmäisellä käyttökerralla ja tallennetaan sen jälkeen välimuistiin. Rekisteröityjen kielten viestit luodaan `meta`-arvosta uudelleen jokaisella käyttökerralla, joten kielen vaihto näkyy välittömästi.
+Rekisteröidyt viestit luodaan `meta`-arvosta jokaisella käyttökerralla, joten kielen vaihto näkyy välittömästi.
 :::
 
 ## Seuraavat vaiheet [#next-steps]
 
-Aloita [asennuksesta](/fi/installation) ja katso koko työnkulku [käyttöohjeesta](/fi/usage). Tyyppien ja argumenttien yksityiskohdat on koottu [API-viitteeseen](/fi/api).
+Aloita [asennuksesta](/fi/installation) ja katso työnkulku [käyttöohjeesta](/fi/usage). Yksityiskohdat on koottu [API-viitteeseen](/fi/api).
