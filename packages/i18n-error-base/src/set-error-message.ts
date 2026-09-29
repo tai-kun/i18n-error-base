@@ -3,7 +3,7 @@ import type { I18N_ERROR_BASE_SYMBOL } from "./_i18n-error-base-symbol.types.js"
 import type { default as I18nErrorBase } from "./i18n-error-base.js";
 
 /**
- * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#i18nerrorbaseconstructor)
+ * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#i18n-error-base-constructor)
  */
 export interface I18nErrorBaseConstructor {
   /**
@@ -15,7 +15,7 @@ export interface I18nErrorBaseConstructor {
 }
 
 /**
- * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#seterrormessage)
+ * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#set-error-message)
  */
 export default function setErrorMessage<TReference extends I18nErrorBaseConstructor>(
   reference: TReference,

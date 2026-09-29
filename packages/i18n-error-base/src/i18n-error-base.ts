@@ -4,7 +4,7 @@ import getMessageMap from "./_get-message-map.js";
 import type { I18N_ERROR_BASE_SYMBOL } from "./_i18n-error-base-symbol.types.js";
 
 /**
- * [API Reference](https://tai-kun.github.io/i18n-error-base/reference/#erroroptions)
+ * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#error-options)
  */
 export type ErrorOptions =
   ConstructorParameters<typeof Error> extends [
@@ -15,21 +15,21 @@ export type ErrorOptions =
     : { readonly cause?: unknown }; // ポリフィルです。
 
 /**
- * [API Reference](https://tai-kun.github.io/i18n-error-base/reference/#errormeta)
+ * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#error-meta)
  */
 export type ErrorMeta = {
   readonly [prop: string]: unknown;
 };
 
 /**
- * [API Reference](https://tai-kun.github.io/i18n-error-base/reference/#messagefactory)
+ * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#message-factory)
  */
 export interface MessageFactory<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> {
   (meta: TMeta): string;
 }
 
 /**
- * [API Reference](https://tai-kun.github.io/i18n-error-base/reference/#i18nerrorbaseparams)
+ * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#i18n-error-base-params)
  */
 export type I18nErrorBaseParams<TMeta extends ErrorMeta | undefined = ErrorMeta | undefined> = [
   TMeta,
@@ -58,28 +58,28 @@ interface _ErrorConstructor extends ErrorConstructor {
 /**
  * [Document](https://tai-kun.github.io/i18n-error-base/)
  *
- * [API Reference](https://tai-kun.github.io/i18n-error-base/reference/#i18nerrorbase)
+ * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#i18n-error-base)
  */
 export default class I18nErrorBase<
   TMeta extends ErrorMeta | undefined = ErrorMeta | undefined,
 > extends (Error as _ErrorConstructor) {
   /**
-   * [API Reference](https://tai-kun.github.io/i18n-error-base/reference/#i18nerrorbase-static-prefix)
+   * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#static-props)
    */
   static prefix?: string;
 
   /**
-   * [API Reference](https://tai-kun.github.io/i18n-error-base/reference/#i18nerrorbase-message)
+   * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#instance-props)
    */
   public override readonly message!: string;
 
   /**
-   * [API Reference](https://tai-kun.github.io/i18n-error-base/reference/#i18nerrorbase-meta)
+   * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#instance-props)
    */
   public meta: TMeta;
 
   /**
-   * [API Reference](https://tai-kun.github.io/i18n-error-base/reference/#i18nerrorbase-constructor)
+   * [API Reference](https://tai-kun.github.io/i18n-error-base/api/#constructor)
    */
   public constructor(...params: I18nErrorBaseParams<TMeta>) {
     const [meta, message, options] = (
