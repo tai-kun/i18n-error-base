@@ -1,14 +1,14 @@
 ---
 title: インストール
-description: i18n-error-base のインストール方法と動作要件。
+description: i18n-error-base のインストール方法と動作要件です。
 ---
 
 ## 要件 [#requirements]
 
-- Node.js など ES モジュールを扱える実行環境
-- ピア依存として `valibot@^1.0.0` が必要です
+- Node.js など ES モジュールを扱える実行環境です。
+- ピア依存として `valibot@^1.0.0` が必要です。
 
-`I18nErrorBase` は内部で Valibot の `getGlobalConfig()` を参照し、現在の `lang` を取得します。Valibot を使っていないプロジェクトでも、言語切り替えのためだけに `setGlobalConfig({ lang })` を呼び出せば動作します。
+`message` は  Valibot の `getGlobalConfig()` の `lang` に従います。
 
 ## インストール [#installation]
 
@@ -23,7 +23,7 @@ npm i valibot
 ```
 
 :::warning[ピア依存に注意]
-`i18n-error-base` は `valibot` をバンドルしません。ホスト側で `valibot@^1.0.0` を用意しないと、インポート時に解決エラーになります。
+`valibot` はバンドルしません。`valibot@^1.0.0` がないとインポートで解決エラーになります。
 :::
 
 ## インポート [#import]
@@ -33,17 +33,6 @@ import { I18nErrorBase, setErrorMessage } from "i18n-error-base";
 import type { ErrorMeta, ErrorOptions, I18nErrorBaseParams, MessageFactory } from "i18n-error-base";
 ```
 
-既定のエクスポートも用意されています。
-
-```ts
-import I18nErrorBase from "i18n-error-base";
-import setErrorMessage from "i18n-error-base";
-```
-
-:::note
-パッケージは ESM（`"type": "module"`）で配布され、副作用はありません（`"sideEffects": false`）。型定義は `dist/src/*.d.ts` から解決されます。
-:::
-
 ## 次のステップ
 
-[使い方](/ja/usage)でエラークラスの定義と言語切り替えの基本を確認してください。
+[使い方](/ja/usage)で定義と切り替えの基本を確認してください。
